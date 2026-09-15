@@ -1,95 +1,161 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>متجرنا - ساعة ذكية فائقة الأداء</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap" rel="stylesheet">
-    <style>body { font-family: 'Tajawal', sans-serif; }</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CRM - إدارة الطلبيات</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Tajawal', sans-serif; }
+  </style>
 </head>
+
 <body class="bg-gray-100 min-h-screen">
 
-    <div class="max-w-md mx-auto bg-white min-h-screen shadow-lg">
-        <!-- صورة المنتج -->
-        <img src="https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&q=80" alt="Product" class="w-full h-72 object-cover">
-        
-        <div class="p-5">
-            <h1 class="text-2xl font-bold text-gray-800">Smart Watch Series 9 - ساعة ذكية أصلية</h1>
-            <div class="flex items-center space-x-2 space-x-reverse mt-2">
-                <span class="text-2xl font-bold text-emerald-600">4,500 د.ج</span>
-                <span class="text-sm line-through text-gray-400">6,500 د.ج</span>
-                <span class="bg-red-100 text-red-600 text-xs px-2 py-1 rounded-full font-bold">تخفيض 30%</span>
-            </div>
+  <div class="max-w-7xl mx-auto p-4 md:p-8">
 
-            <!-- استمارة الطلب السريع -->
-            <div class="mt-6 border-t pt-4">
-                <h2 class="text-lg font-bold text-gray-700 mb-3">للطلب يرجى إدخال معلوماتك:</h2>
-                
-                <form id="orderForm" class="space-y-3">
-                    <div>
-                        <label class="block text-sm text-gray-600 mb-1">الاسم الكامل *</label>
-                        <input type="text" id="name" required class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="محمد بن علي">
-                    </div>
-                    <div>
-                        <label class="block text-sm text-gray-600 mb-1">رقم الهاتف *</label>
-                        <input type="tel" id="phone" required class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="0550123456">
-                    </div>
-                    <div class="grid grid-cols-2 gap-2">
-                        <div>
-                            <label class="block text-sm text-gray-600 mb-1">الولاية *</label>
-                            <input type="text" id="wilaya" required class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="الجزائر">
-                        </div>
-                        <div>
-                            <label class="block text-sm text-gray-600 mb-1">البلدية *</label>
-                            <input type="text" id="commune" required class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="باب الزوار">
-                        </div>
-                    </div>
+    <div class="bg-white rounded-xl shadow p-5 mb-6 flex flex-col md:flex-row gap-4 justify-between items-center">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-800">لوحة إدارة الطلبيات</h1>
+        <p class="text-gray-500 text-sm">CRM لتأكيد ومتابعة طلبات المتجر</p>
+      </div>
 
-                    <button type="submit" id="submitBtn" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 rounded-xl shadow-lg mt-4 transition duration-200">
-                        اضغط هنا لتأكيد الطلب 🚚
-                    </button>
-                </form>
+      <div class="flex gap-2">
+        <a href="/api/export-csv"
+           class="bg-green-600 text-white px-4 py-2 rounded-lg font-bold">
+          تصدير المؤكد Excel
+        </a>
 
-                <div id="successMsg" class="hidden mt-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded-lg text-center font-bold">
-                    تم استلام طلبك بنجاح! سنتصل بك قريباً لتأكيد التوصيل.
-                </div>
-            </div>
-        </div>
+        <button onclick="loadOrders()"
+                class="bg-gray-800 text-white px-4 py-2 rounded-lg font-bold">
+          تحديث
+        </button>
+      </div>
     </div>
 
-    <script>
-        document.getElementById('orderForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const submitBtn = document.getElementById('submitBtn');
-            submitBtn.disabled = true;
-            submitBtn.innerText = 'جاري إرسال الطلب...';
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      <div class="bg-white rounded-xl shadow p-4">
+        <p class="text-gray-500">كل الطلبات</p>
+        <p id="total" class="text-3xl font-bold">0</p>
+      </div>
 
-            const orderData = {
-                name: document.getElementById('name').value,
-                phone: document.getElementById('phone').value,
-                wilaya: document.getElementById('wilaya').value,
-                commune: document.getElementById('commune').value,
-                product: 'Smart Watch Series 9',
-                quantity: 1,
-                price: 4500
-            };
+      <div class="bg-white rounded-xl shadow p-4">
+        <p class="text-green-600">مؤكد</p>
+        <p id="confirmed" class="text-3xl font-bold text-green-600">0</p>
+      </div>
 
-            try {
-                const res = await fetch('/api/orders', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(orderData)
-                });
-                if (res.ok) {
-                    document.getElementById('orderForm').reset();
-                    document.getElementById('orderForm').classList.add('hidden');
-                    document.getElementById('successMsg').classList.remove('hidden');
-                }
-            } catch (err) {
-                alert('حدث خطأ أثناء إرسال الطلب!');
-            }
-        });
-    </script>
+      <div class="bg-white rounded-xl shadow p-4">
+        <p class="text-yellow-600">قيد المتابعة</p>
+        <p id="pending" class="text-3xl font-bold text-yellow-600">0</p>
+      </div>
+
+      <div class="bg-white rounded-xl shadow p-4">
+        <p class="text-red-600">ملغى</p>
+        <p id="cancelled" class="text-3xl font-bold text-red-600">0</p>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-xl shadow overflow-x-auto">
+      <table class="w-full text-right">
+        <thead class="bg-gray-800 text-white">
+          <tr>
+            <th class="p-3">#</th>
+            <th class="p-3">الزبون</th>
+            <th class="p-3">الهاتف</th>
+            <th class="p-3">العنوان</th>
+            <th class="p-3">السعر</th>
+            <th class="p-3">الحالة</th>
+            <th class="p-3">إجراء</th>
+          </tr>
+        </thead>
+
+        <tbody id="ordersTable"></tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <script>
+    function escapeHtml(text) {
+      return String(text || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    async function loadOrders() {
+      const response = await fetch('/api/orders');
+      const orders = await response.json();
+
+      let confirmed = 0;
+      let cancelled = 0;
+      let pending = 0;
+
+      const table = document.getElementById('ordersTable');
+      table.innerHTML = '';
+
+      orders.forEach(order => {
+        if (order.status === 'مؤكد') confirmed++;
+        else if (order.status === 'ملغى') cancelled++;
+        else pending++;
+
+        table.innerHTML += `
+          <tr class="border-b hover:bg-gray-50">
+            <td class="p-3 font-bold">#${order.id}</td>
+            <td class="p-3">${escapeHtml(order.name)}</td>
+            <td class="p-3">
+              <a class="text-blue-600 font-bold" href="tel:${escapeHtml(order.phone)}">
+                📞 ${escapeHtml(order.phone)}
+              </a>
+            </td>
+            <td class="p-3">${escapeHtml(order.wilaya)} - ${escapeHtml(order.commune)}</td>
+            <td class="p-3 text-green-600 font-bold">${order.price} د.ج</td>
+            <td class="p-3">
+              <select id="status-${order.id}" class="border rounded p-2 text-sm">
+                <option value="جديد" ${order.status === 'جديد' ? 'selected' : ''}>جديد</option>
+                <option value="مؤكد" ${order.status === 'مؤكد' ? 'selected' : ''}>مؤكد ✅</option>
+                <option value="لا يجيب 1" ${order.status === 'لا يجيب 1' ? 'selected' : ''}>لا يجيب 1</option>
+                <option value="لا يجيب 2" ${order.status === 'لا يجيب 2' ? 'selected' : ''}>لا يجيب 2</option>
+                <option value="مؤجل" ${order.status === 'مؤجل' ? 'selected' : ''}>مؤجل</option>
+                <option value="ملغى" ${order.status === 'ملغى' ? 'selected' : ''}>ملغى ❌</option>
+              </select>
+            </td>
+            <td class="p-3">
+              <button onclick="saveOrder(${order.id})"
+                class="bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-bold">
+                حفظ
+              </button>
+            </td>
+          </tr>
+        `;
+      });
+
+      document.getElementById('total').innerText = orders.length;
+      document.getElementById('confirmed').innerText = confirmed;
+      document.getElementById('pending').innerText = pending;
+      document.getElementById('cancelled').innerText = cancelled;
+    }
+
+    async function saveOrder(id) {
+      const status = document.getElementById(`status-${id}`).value;
+
+      await fetch(`/api/orders/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: status,
+          notes: ''
+        })
+      });
+
+      loadOrders();
+    }
+
+    loadOrders();
+  </script>
+
 </body>
 </html>
