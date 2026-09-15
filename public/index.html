@@ -1,299 +1,119 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title id="pageTitle">العرض الخاص - متجرنا</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;800&display=swap" rel="stylesheet">
-    <style>body { font-family: 'Tajawal', sans-serif; }</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>COD CRM - تسجيل الدخول</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { font-family: 'Tajawal', sans-serif; }
+    body { 
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+      min-height: 100vh;
+    }
+    .glass-card {
+      background: rgba(255,255,255,0.05);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .glow-btn {
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      box-shadow: 0 0 30px rgba(59,130,246,0.3);
+      transition: all 0.3s;
+    }
+    .glow-btn:hover {
+      box-shadow: 0 0 50px rgba(59,130,246,0.5);
+      transform: translateY(-2px);
+    }
+    .floating { animation: float 6s ease-in-out infinite; }
+    @keyframes float {
+      0%,100% { transform: translateY(0px); }
+      50% { transform: translateY(-20px); }
+    }
+  </style>
 </head>
-<body class="bg-gray-100 min-h-screen pb-12">
+<body class="flex items-center justify-center p-4">
 
-    <div class="max-w-md mx-auto bg-white min-h-screen shadow-2xl relative">
-        
-        <!-- الشريط العلوي للتخفيض -->
-        <div class="bg-red-600 text-white text-center text-xs py-2 font-bold animate-pulse">
-            🔥 تخفيض هائل لفترة محدودة + التوصيل متوفر لـ 58 ولاية!
-        </div>
-
-        <!-- صورة المنتج -->
-        <div class="relative">
-            <img id="productImage" src="" alt="Product" class="w-full h-80 object-cover bg-gray-200">
-            <span class="absolute top-3 right-3 bg-red-600 text-white text-xs px-3 py-1 rounded-full font-bold shadow-md">
-                تخفيض 35%
-            </span>
-        </div>
-        
-        <div class="p-5">
-            <!-- اسم المنتج وسعره -->
-            <h1 id="productName" class="text-2xl font-extrabold text-gray-800 leading-tight">جاري التحميل...</h1>
-            
-            <!-- العداد التنازلي -->
-            <div class="my-4 p-3 bg-red-50 border border-red-200 rounded-xl flex justify-between items-center text-xs text-red-700 font-bold">
-                <span>⏰ ينتهي العرض خلال:</span>
-                <span id="timer" class="text-sm font-black bg-red-600 text-white px-2 py-1 rounded">02:14:55</span>
-            </div>
-
-            <!-- خيارات الكمية والعروض -->
-            <div class="my-4 space-y-2">
-                <label class="block text-xs font-bold text-gray-700">اختر العرض المناسب لك:</label>
-                
-                <div onclick="selectPack(1)" id="pack1" class="border-2 border-emerald-600 bg-emerald-50/50 p-3 rounded-xl cursor-pointer flex justify-between items-center transition">
-                    <div>
-                        <div class="font-bold text-sm text-gray-800">قطعة واحدة (1)</div>
-                        <div class="text-xs text-gray-500">السعر العادي</div>
-                    </div>
-                    <div id="pack1Price" class="font-extrabold text-emerald-600 text-lg">0 د.ج</div>
-                </div>
-
-                <div onclick="selectPack(2)" id="pack2" class="border border-gray-200 p-3 rounded-xl cursor-pointer flex justify-between items-center transition relative overflow-hidden">
-                    <span class="absolute top-0 left-0 bg-orange-500 text-white text-[10px] px-2 py-0.5 rounded-br font-bold">الأكثر طلباً 🔥</span>
-                    <div>
-                        <div class="font-bold text-sm text-gray-800">قطعتين (2)</div>
-                        <div class="text-xs text-emerald-600 font-bold">خصم خاص على القطعة الثانية</div>
-                    </div>
-                    <div id="pack2Price" class="font-extrabold text-gray-800 text-lg">0 د.ج</div>
-                </div>
-            </div>
-
-            <!-- استمارة الطلب السريع -->
-            <div class="mt-6 border-t pt-4">
-                <h2 class="text-md font-bold text-gray-800 mb-3 flex items-center gap-1">
-                    📝 أخل معلوماتك لتأكيد الطلب:
-                </h2>
-                
-                <form id="orderForm" class="space-y-3">
-                    <div>
-                        <label class="block text-xs font-bold text-gray-600 mb-1">الاسم الكامل *</label>
-                        <input type="text" id="name" required class="w-full p-3 border rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-sm bg-gray-50" placeholder="مثال: محمد بن علي">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-600 mb-1">رقم الهاتف *</label>
-                        <input type="tel" id="phone" required class="w-full p-3 border rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-sm bg-gray-50" placeholder="0550123456">
-                    </div>
-                    
-                    <!-- قائمة الـ 58 ولاية -->
-                    <div class="grid grid-cols-2 gap-2">
-                        <div>
-                            <label class="block text-xs font-bold text-gray-600 mb-1">الولاية *</label>
-                            <select id="wilaya" required onchange="updateShipping()" class="w-full p-3 border rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-sm bg-gray-50 font-bold">
-                                <option value="">اختر الولاية...</option>
-                                <option value="1. أدرار">01. أدرار</option>
-                                <option value="2. الشلف">02. الشلف</option>
-                                <option value="3. الأغواط">03. الأغواط</option>
-                                <option value="4. أم البواقي">04. أم البواقي</option>
-                                <option value="5. باتنة">05. باتنة</option>
-                                <option value="6. بجاية">06. بجاية</option>
-                                <option value="7. بسكرة">07. بسكرة</option>
-                                <option value="8. بشار">08. بشار</option>
-                                <option value="9. البليدة">09. البليدة</option>
-                                <option value="10. البويرة">10. البويرة</option>
-                                <option value="11. تمنراست">11. تمنراست</option>
-                                <option value="12. تبسة">12. تبسة</option>
-                                <option value="13. تلمسان">13. تلمسان</option>
-                                <option value="14. تيارت">14. تيارت</option>
-                                <option value="15. تيزي وزو">15. تيزي وزو</option>
-                                <option value="16. الجزائر">16. الجزائر</option>
-                                <option value="17. الجلفة">17. الجلفة</option>
-                                <option value="18. جيجل">18. جيجل</option>
-                                <option value="19. سطيف">19. سطيف</option>
-                                <option value="20. سعيدة">20. سعيدة</option>
-                                <option value="21. سكيكدة">21. سكيكدة</option>
-                                <option value="22. سيدي بلعباس">22. سيدي بلعباس</option>
-                                <option value="23. عنابة">23. عنابة</option>
-                                <option value="24. قالمة">24. قالمة</option>
-                                <option value="25. قسنطينة">25. قالمة</option>
-                                <option value="26. المدية">26. المدية</option>
-                                <option value="27. مستغانم">27. مستغانم</option>
-                                <option value="28. المسيلة">28. المسيلة</option>
-                                <option value="29. معسكر">29. معسكر</option>
-                                <option value="30. ورقلة">30. ورقلة</option>
-                                <option value="31. وهران">31. وهران</option>
-                                <option value="32. البيض">32. البيض</option>
-                                <option value="33. إليزي">33. إليزي</option>
-                                <option value="34. برج بوعريريج">34. برج بوعريريج</option>
-                                <option value="35. بومرداس">35. بومرداس</option>
-                                <option value="36. الطارف">36. الطارف</option>
-                                <option value="37. تندوف">37. تندوف</option>
-                                <option value="38. تسمسيلت">38. تسمسيلت</option>
-                                <option value="39. الوادي">39. الوادي</option>
-                                <option value="40. خنشلة">40. خنشلة</option>
-                                <option value="41. سوق أهراس">41. سوق أهراس</option>
-                                <option value="42. تيبازة">42. تيبازة</option>
-                                <option value="43. ميلة">43. ميلة</option>
-                                <option value="44. عين الدفلى">44. عين الدفلى</option>
-                                <option value="45. النعامة">45. النعامة</option>
-                                <option value="46. عين تموشنت">46. عين تموشنت</option>
-                                <option value="47. غرداية">47. غرداية</option>
-                                <option value="48. غليزان">48. غليزان</option>
-                                <option value="49. المغير">49. المغير</option>
-                                <option value="50. المنيعة">50. المنيعة</option>
-                                <option value="51. أولاد جلال">51. أولاد جلال</option>
-                                <option value="52. برج باجي مختار">52. برج باجي مختار</option>
-                                <option value="53. بني عباس">53. بني عباس</option>
-                                <option value="54. تيميمون">54. تيميمون</option>
-                                <option value="55. تقرت">55. تقرت</option>
-                                <option value="56. جانت">56. جانت</option>
-                                <option value="57. إن صالح">57. إن صالح</option>
-                                <option value="58. إن قزام">58. إن قزام</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-gray-600 mb-1">البلدية *</label>
-                            <input type="text" id="commune" required class="w-full p-3 border rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-sm bg-gray-50" placeholder="مثال: وسط المدينة">
-                        </div>
-                    </div>
-
-                    <!-- فاتورة الحساب الشفافة -->
-                    <div class="bg-gray-50 p-3 rounded-xl border space-y-1 text-xs text-gray-600 mt-2">
-                        <div class="flex justify-between">
-                            <span>سعر المنتج:</span>
-                            <span id="summaryProductPrice" class="font-bold">0 د.ج</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span>التوصيل:</span>
-                            <span id="summaryShippingPrice" class="font-bold text-emerald-600">اختر الولاية</span>
-                        </div>
-                        <hr class="my-1">
-                        <div class="flex justify-between text-sm font-black text-gray-800">
-                            <span>المجموع الكلي:</span>
-                            <span id="summaryTotalPrice" class="text-emerald-600">0 د.ج</span>
-                        </div>
-                    </div>
-
-                    <button type="submit" id="submitBtn" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-4 rounded-xl shadow-lg mt-4 transition duration-200 text-base flex items-center justify-center gap-2">
-                        <span>تأكيد الطلب الآن</span> 🚚
-                    </button>
-                </form>
-
-                <div id="successMsg" class="hidden mt-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded-xl text-center font-bold">
-                    🥳 تم استلام طلبك بنجاح! سنتصل بك في أقرب وقت لتأكيد التوصيل.
-                </div>
-            </div>
-
-            <!-- قسم تقييمات الزبائن -->
-            <div class="mt-8 border-t pt-4">
-                <h3 class="text-sm font-bold text-gray-800 mb-3">⭐ آراء بعض زبائننا:</h3>
-                <div class="space-y-3 text-xs">
-                    <div class="bg-gray-50 p-3 rounded-xl border">
-                        <div class="flex justify-between items-center font-bold text-gray-700 mb-1">
-                            <span>أمين - الجزائر</span>
-                            <span class="text-yellow-500">⭐⭐⭐⭐⭐</span>
-                        </div>
-                        <p class="text-gray-500">لحقتني في يومين، نوعية ممتازة وصوتها واضح بزاف. شكراً للمتجر على السرعة!</p>
-                    </div>
-                    <div class="bg-gray-50 p-3 rounded-xl border">
-                        <div class="flex justify-between items-center font-bold text-gray-700 mb-1">
-                            <span>سارة - وهران</span>
-                            <span class="text-yellow-500">⭐⭐⭐⭐⭐</span>
-                        </div>
-                        <p class="text-gray-500">تعامل محترم والتوصيل حتى لدار. السلعة كيما في الصورة بالضبط.</p>
-                    </div>
-                </div>
-            </div>
-
-        </div>
+  <div class="w-full max-w-md">
+    <!-- Logo -->
+    <div class="text-center mb-8 floating">
+      <div class="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 mb-4 shadow-2xl">
+        <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+        </svg>
+      </div>
+      <h1 class="text-3xl font-extrabold text-white">COD CRM</h1>
+      <p class="text-gray-400 mt-2">نظام إدارة الطلبيات - الجزائر 🇩🇿</p>
     </div>
 
-    <script>
-        let basePrice = 4500;
-        let selectedQuantity = 1;
-        let shippingCost = 600;
+    <!-- Login Form -->
+    <div class="glass-card rounded-2xl p-8">
+      <form id="loginForm" class="space-y-6">
+        <div>
+          <label class="block text-gray-300 text-sm font-medium mb-2">اسم المستخدم</label>
+          <input type="text" id="username" required
+                 class="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white 
+                        placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500
+                        focus:border-transparent transition-all"
+                 placeholder="أدخل اسم المستخدم">
+        </div>
 
-        async function loadProduct() {
-            try {
-                const res = await fetch('/api/settings');
-                const data = await res.json();
-                basePrice = data.price;
-                shippingCost = data.shipping_cost || 600;
+        <div>
+          <label class="block text-gray-300 text-sm font-medium mb-2">كلمة المرور</label>
+          <input type="password" id="password" required
+                 class="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white 
+                        placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500
+                        focus:border-transparent transition-all"
+                 placeholder="أدخل كلمة المرور">
+        </div>
 
-                document.getElementById('productName').innerText = data.product_name;
-                document.getElementById('pageTitle').innerText = data.product_name;
-                document.getElementById('productImage').src = data.image_url;
+        <div id="errorMsg" class="hidden bg-red-500/20 border border-red-500/50 rounded-xl p-3 text-red-300 text-sm"></div>
 
-                updatePrices();
-            } catch(e) {}
-        }
+        <button type="submit" class="w-full glow-btn text-white font-bold py-3 px-6 rounded-xl text-lg">
+          تسجيل الدخول
+        </button>
+      </form>
 
-        function selectPack(qty) {
-            selectedQuantity = qty;
-            if(qty === 1) {
-                document.getElementById('pack1').className = "border-2 border-emerald-600 bg-emerald-50/50 p-3 rounded-xl cursor-pointer flex justify-between items-center transition";
-                document.getElementById('pack2').className = "border border-gray-200 p-3 rounded-xl cursor-pointer flex justify-between items-center transition relative overflow-hidden";
-            } else {
-                document.getElementById('pack2').className = "border-2 border-emerald-600 bg-emerald-50/50 p-3 rounded-xl cursor-pointer flex justify-between items-center transition relative overflow-hidden";
-                document.getElementById('pack1').className = "border border-gray-200 p-3 rounded-xl cursor-pointer flex justify-between items-center transition";
-            }
-            updatePrices();
-        }
+      <div class="mt-6 text-center">
+        <p class="text-gray-500 text-xs">الحساب الافتراضي: admin / admin123</p>
+      </div>
+    </div>
+  </div>
 
-        function updatePrices() {
-            let productTotal = (selectedQuantity === 1) ? basePrice : (basePrice * 1.75); // تخفيض للقطعة الثانية
-            
-            document.getElementById('pack1Price').innerText = basePrice.toLocaleString() + ' د.ج';
-            document.getElementById('pack2Price').innerText = Math.round(basePrice * 1.75).toLocaleString() + ' د.ج';
+  <script>
+    // تحقق إذا كان المستخدم مسجل دخول
+    if (localStorage.getItem('token')) {
+      window.location.href = '/crm';
+    }
 
-            document.getElementById('summaryProductPrice').innerText = Math.round(productTotal).toLocaleString() + ' د.ج';
-            
-            const wilayaVal = document.getElementById('wilaya').value;
-            if(wilayaVal) {
-                document.getElementById('summaryShippingPrice').innerText = shippingCost.toLocaleString() + ' د.ج';
-                document.getElementById('summaryTotalPrice').innerText = Math.round(productTotal + shippingCost).toLocaleString() + ' د.ج';
-            } else {
-                document.getElementById('summaryShippingPrice').innerText = 'اختر الولاية';
-                document.getElementById('summaryTotalPrice').innerText = Math.round(productTotal).toLocaleString() + ' د.ج';
-            }
-        }
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const errorMsg = document.getElementById('errorMsg');
+      errorMsg.classList.add('hidden');
 
-        function updateShipping() {
-            updatePrices();
-        }
+      const username = document.getElementById('username').value;
+      const password = document.getElementById('password').value;
 
-        // العداد التنازلي
-        let time = 8095;
-        setInterval(() => {
-            let m = Math.floor(time / 60);
-            let s = time % 60;
-            document.getElementById('timer').innerText = `01:${m < 10 ? '0':''}${m}:${s < 10 ? '0':''}${s}`;
-            if(time > 0) time--;
-        }, 1000);
-
-        document.getElementById('orderForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const submitBtn = document.getElementById('submitBtn');
-            submitBtn.disabled = true;
-            submitBtn.innerText = 'جاري إرسال الطلب...';
-
-            let productTotal = (selectedQuantity === 1) ? basePrice : (basePrice * 1.75);
-
-            const orderData = {
-                name: document.getElementById('name').value,
-                phone: document.getElementById('phone').value,
-                wilaya: document.getElementById('wilaya').value,
-                commune: document.getElementById('commune').value,
-                quantity: selectedQuantity,
-                price: Math.round(productTotal + shippingCost)
-            };
-
-            try {
-                const res = await fetch('/api/orders', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(orderData)
-                });
-                if (res.ok) {
-                    document.getElementById('orderForm').reset();
-                    document.getElementById('orderForm').classList.add('hidden');
-                    document.getElementById('successMsg').classList.remove('hidden');
-                }
-            } catch (err) {
-                alert('حدث خطأ أثناء إرسال الطلب!');
-                submitBtn.disabled = false;
-            }
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
         });
 
-        loadProduct();
-    </script>
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        window.location.href = '/crm';
+      } catch (err) {
+        errorMsg.textContent = err.message;
+        errorMsg.classList.remove('hidden');
+      }
+    });
+  </script>
 </body>
 </html>
