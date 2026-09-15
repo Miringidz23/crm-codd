@@ -8,7 +8,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <!-- مكتبة توليد الباركود للوصل -->
-<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
   <style>
     * { font-family: 'Tajawal', sans-serif; }
     body { background: #0f172a; color: #e2e8f0; }
@@ -73,16 +73,26 @@
       100% { box-shadow: 0 0 0 0 rgba(59,130,246,0); }
     }
 
-    .tab-btn { transition: all 0.2s; border-bottom: 3px solid transparent; }
-    .tab-btn.active { border-bottom-color: #3b82f6; color: #3b82f6; }
-    .tab-btn:hover { color: #60a5fa; }
+    /* Print Bordereau Styles */
+    @media print {
+      body * { visibility: hidden !important; }
+      #printArea, #printArea * { visibility: visible !important; }
+      #printArea {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        background: white !important;
+        color: black !important;
+      }
+      .page-break { page-break-after: always; }
+    }
   </style>
 </head>
 <body class="min-h-screen">
 
 <!-- =================== SIDEBAR =================== -->
 <div class="fixed right-0 top-0 h-full w-64 sidebar z-50 flex flex-col" id="sidebar">
-  <!-- Logo -->
   <div class="p-5 border-b border-gray-700">
     <div class="flex items-center gap-3">
       <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
@@ -95,7 +105,6 @@
     </div>
   </div>
 
-  <!-- Navigation -->
   <nav class="flex-1 p-3 space-y-1">
     <a href="#" onclick="showSection('dashboard')" class="sidebar-item active flex items-center gap-3 px-4 py-3 rounded-xl text-sm" data-section="dashboard">
       <i class="fas fa-chart-pie w-5"></i> لوحة التحكم
@@ -112,7 +121,6 @@
     </a>
   </nav>
 
-  <!-- User Info -->
   <div class="p-4 border-t border-gray-700">
     <div class="flex items-center gap-3">
       <div class="w-9 h-9 rounded-full bg-gradient-to-br from-green-400 to-blue-500 flex items-center justify-center">
@@ -132,7 +140,6 @@
 <!-- =================== MAIN CONTENT =================== -->
 <div class="mr-64 min-h-screen">
 
-  <!-- Top Bar -->
   <div class="sticky top-0 z-40 bg-slate-900/95 backdrop-blur border-b border-gray-700 px-6 py-3">
     <div class="flex items-center justify-between">
       <div>
@@ -148,55 +155,39 @@
     </div>
   </div>
 
-  <!-- ====== DASHBOARD SECTION ====== -->
+  <!-- DASHBOARD SECTION -->
   <div id="section-dashboard" class="p-6 space-y-6">
-    <!-- Stats Cards -->
-    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4" id="statsGrid">
-      <!-- يتم ملؤها بـ JavaScript -->
-    </div>
-
-    <!-- Charts & Performance Row -->
+    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4" id="statsGrid"></div>
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <!-- أداء العمال -->
       <div class="stat-card rounded-2xl p-5">
         <h3 class="text-lg font-bold mb-4"><i class="fas fa-trophy text-yellow-500 ml-2"></i>أداء العمال اليوم</h3>
-        <div id="agentPerformance" class="space-y-3">
-          <!-- يتم ملؤها بـ JavaScript -->
-        </div>
+        <div id="agentPerformance" class="space-y-3"></div>
       </div>
-
-      <!-- تنبيهات المخزون -->
       <div class="stat-card rounded-2xl p-5">
         <h3 class="text-lg font-bold mb-4"><i class="fas fa-triangle-exclamation text-red-500 ml-2"></i>تنبيهات المخزون</h3>
-        <div id="lowStockAlerts" class="space-y-3">
-          <!-- يتم ملؤها بـ JavaScript -->
-        </div>
+        <div id="lowStockAlerts" class="space-y-3"></div>
       </div>
     </div>
-
-    <!-- Overall Stats -->
     <div class="stat-card rounded-2xl p-5">
       <h3 class="text-lg font-bold mb-4"><i class="fas fa-chart-bar text-blue-500 ml-2"></i>الإحصائيات العامة</h3>
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="overallStats">
-        <!-- يتم ملؤها بـ JavaScript -->
-      </div>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="overallStats"></div>
     </div>
   </div>
 
-  <!-- ====== ORDERS SECTION ====== -->
+  <!-- ORDERS SECTION -->
   <div id="section-orders" class="p-6 space-y-4 hidden">
-    <!-- Orders Toolbar -->
     <div class="flex flex-wrap items-center gap-3">
       <button onclick="openNewOrderModal()" class="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-5 py-2.5 rounded-xl font-medium transition-all">
         <i class="fas fa-plus ml-2"></i>طلبية جديدة
       </button>
-      <button onclick="autoAssignOrders()" class="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2.5 rounded-xl font-medium transition-all admin-only">
+      <button onclick="printSelectedBordereaux()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl font-medium transition-all">
+        <i class="fas fa-print ml-2"></i>طباعة المحدد (Bulk)
+      </button>      <button onclick="autoAssignOrders()" class="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2.5 rounded-xl font-medium transition-all admin-only">
         <i class="fas fa-wand-magic-sparkles ml-2"></i>توزيع تلقائي
       </button>
       
       <div class="flex-1"></div>
       
-      <!-- Filters -->
       <select id="filterStatus" onchange="loadOrders()" class="input-field rounded-xl px-4 py-2.5 text-sm">
         <option value="">جميع الحالات</option>
         <option value="new">جديدة</option>
@@ -209,19 +200,15 @@
         <option value="returned">مرتجعة</option>
       </select>
       
-      <input type="text" id="searchOrders" placeholder="بحث بالاسم أو الهاتف..."
-             onkeyup="debounceSearch()" class="input-field rounded-xl px-4 py-2.5 text-sm w-64">
+      <input type="text" id="searchOrders" placeholder="بحث بالاسم أو الهاتف..." onkeyup="debounceSearch()" class="input-field rounded-xl px-4 py-2.5 text-sm w-64">
     </div>
 
-    <!-- Orders Table -->
     <div class="stat-card rounded-2xl overflow-hidden">
       <div class="overflow-x-auto">
         <table class="w-full text-sm">
           <thead>
             <tr class="bg-slate-800/50 text-gray-400">
-              <th class="px-4 py-3 text-right">
-                <input type="checkbox" id="selectAll" onchange="toggleSelectAll()" class="rounded">
-              </th>
+              <th class="px-4 py-3 text-right"><input type="checkbox" id="selectAll" onchange="toggleSelectAll()" class="rounded"></th>
               <th class="px-4 py-3 text-right">رقم التتبع</th>
               <th class="px-4 py-3 text-right">العميل</th>
               <th class="px-4 py-3 text-right">الهاتف</th>
@@ -234,13 +221,9 @@
               <th class="px-4 py-3 text-center">إجراءات</th>
             </tr>
           </thead>
-          <tbody id="ordersTableBody">
-            <!-- يتم ملؤها بـ JavaScript -->
-          </tbody>
+          <tbody id="ordersTableBody"></tbody>
         </table>
       </div>
-      
-      <!-- Pagination -->
       <div class="flex items-center justify-between px-4 py-3 border-t border-gray-700">
         <span class="text-sm text-gray-400" id="ordersCount">0 طلبية</span>
         <div class="flex gap-2" id="pagination"></div>
@@ -248,27 +231,23 @@
     </div>
   </div>
 
-  <!-- ====== PRODUCTS SECTION ====== -->
+  <!-- PRODUCTS SECTION -->
   <div id="section-products" class="p-6 space-y-4 hidden">
     <div class="flex items-center gap-3 mb-4">
-      <button onclick="openNewProductModal()" class="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-5 py-2.5 rounded-xl font-medium transition-all">
+      <button onclick="openNewProductModal()" class="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-5 py-2.5 rounded-xl font-medium transition-all">
         <i class="fas fa-plus ml-2"></i>منتج جديد
       </button>
     </div>
-
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="productsGrid">
-      <!-- يتم ملؤها بـ JavaScript -->
-    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="productsGrid"></div>
   </div>
 
-  <!-- ====== USERS SECTION ====== -->
+  <!-- USERS SECTION -->
   <div id="section-users" class="p-6 space-y-4 hidden">
     <div class="flex items-center gap-3 mb-4">
-      <button onclick="openNewUserModal()" class="bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white px-5 py-2.5 rounded-xl font-medium transition-all">
+      <button onclick="openNewUserModal()" class="bg-gradient-to-r from-purple-500 to-pink-600 text-white px-5 py-2.5 rounded-xl font-medium transition-all">
         <i class="fas fa-user-plus ml-2"></i>مستخدم جديد
       </button>
     </div>
-
     <div class="stat-card rounded-2xl overflow-hidden">
       <table class="w-full text-sm">
         <thead>
@@ -284,9 +263,7 @@
             <th class="px-4 py-3 text-center">إجراءات</th>
           </tr>
         </thead>
-        <tbody id="usersTableBody">
-          <!-- يتم ملؤها بـ JavaScript -->
-        </tbody>
+        <tbody id="usersTableBody"></tbody>
       </table>
     </div>
   </div>
@@ -302,13 +279,10 @@
     <div class="modal-content rounded-2xl w-full max-w-3xl p-6">
       <div class="flex items-center justify-between mb-6">
         <h3 class="text-xl font-bold"><i class="fas fa-plus-circle text-blue-500 ml-2"></i>طلبية جديدة</h3>
-        <button onclick="closeModal('newOrderModal')" class="text-gray-400 hover:text-white">
-          <i class="fas fa-times text-xl"></i>
-        </button>
+        <button onclick="closeModal('newOrderModal')" class="text-gray-400 hover:text-white"><i class="fas fa-times text-xl"></i></button>
       </div>
 
       <form id="newOrderForm" onsubmit="createOrder(event)" class="space-y-4">
-        <!-- بيانات العميل -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label class="block text-sm font-medium text-gray-300 mb-1">اسم العميل *</label>
@@ -316,8 +290,7 @@
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-300 mb-1">رقم الهاتف *</label>
-            <input type="tel" name="customer_phone" required class="input-field w-full rounded-xl px-4 py-2.5" 
-                   placeholder="05XXXXXXXX">
+            <input type="tel" name="customer_phone" required class="input-field w-full rounded-xl px-4 py-2.5" placeholder="05XXXXXXXX">
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-300 mb-1">هاتف ثاني</label>
@@ -325,8 +298,7 @@
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-300 mb-1">الولاية *</label>
-            <select name="wilaya_id" required class="input-field w-full rounded-xl px-4 py-2.5" id="orderWilaya"
-                    onchange="updateDeliveryCost()">
+            <select name="wilaya_id" required class="input-field w-full rounded-xl px-4 py-2.5" id="orderWilaya" onchange="updateDeliveryCost()">
               <option value="">اختر الولاية</option>
             </select>
           </div>
@@ -348,7 +320,6 @@
           <input type="text" name="address" class="input-field w-full rounded-xl px-4 py-2.5">
         </div>
 
-        <!-- المنتجات -->
         <div class="border border-gray-600 rounded-xl p-4">
           <div class="flex items-center justify-between mb-3">
             <h4 class="font-bold text-blue-400"><i class="fas fa-boxes-stacked ml-2"></i>المنتجات</h4>
@@ -356,9 +327,7 @@
               <i class="fas fa-plus ml-1"></i>إضافة منتج
             </button>
           </div>
-          <div id="orderItemsContainer" class="space-y-3">
-            <!-- يتم إضافة صفوف المنتجات هنا -->
-          </div>
+          <div id="orderItemsContainer" class="space-y-3"></div>
           <div class="mt-4 pt-3 border-t border-gray-600 flex justify-between items-center">
             <span class="text-gray-400">تكلفة التوصيل: <strong class="text-white" id="deliveryCostDisplay">0 دج</strong></span>
             <span class="text-lg font-bold">المجموع: <strong class="text-green-400" id="orderTotalDisplay">0 دج</strong></span>
@@ -374,9 +343,7 @@
           <button type="submit" class="flex-1 bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 rounded-xl font-bold text-lg hover:from-blue-600 hover:to-purple-700 transition-all">
             <i class="fas fa-save ml-2"></i>حفظ الطلبية
           </button>
-          <button type="button" onclick="closeModal('newOrderModal')" class="px-6 py-3 bg-gray-700 hover:bg-gray-600 rounded-xl font-medium transition-colors">
-            إلغاء
-          </button>
+          <button type="button" onclick="closeModal('newOrderModal')" class="px-6 py-3 bg-gray-700 hover:bg-gray-600 rounded-xl font-medium transition-colors">إلغاء</button>
         </div>
       </form>
     </div>
@@ -390,9 +357,7 @@
     <div class="modal-content rounded-2xl w-full max-w-lg p-6">
       <div class="flex items-center justify-between mb-6">
         <h3 class="text-xl font-bold"><i class="fas fa-box text-green-500 ml-2"></i>منتج جديد</h3>
-        <button onclick="closeModal('newProductModal')" class="text-gray-400 hover:text-white">
-          <i class="fas fa-times text-xl"></i>
-        </button>
+        <button onclick="closeModal('newProductModal')" class="text-gray-400 hover:text-white"><i class="fas fa-times text-xl"></i></button>
       </div>
 
       <form id="newProductForm" onsubmit="createProduct(event)" class="space-y-4">
@@ -446,9 +411,7 @@
     <div class="modal-content rounded-2xl w-full max-w-lg p-6">
       <div class="flex items-center justify-between mb-6">
         <h3 class="text-xl font-bold"><i class="fas fa-user-plus text-purple-500 ml-2"></i>مستخدم جديد</h3>
-        <button onclick="closeModal('newUserModal')" class="text-gray-400 hover:text-white">
-          <i class="fas fa-times text-xl"></i>
-        </button>
+        <button onclick="closeModal('newUserModal')" class="text-gray-400 hover:text-white"><i class="fas fa-times text-xl"></i></button>
       </div>
 
       <form id="newUserForm" onsubmit="createUser(event)" class="space-y-4">
@@ -500,30 +463,14 @@
       <p class="text-gray-400 text-sm mb-4" id="statusOrderInfo"></p>
       
       <div class="grid grid-cols-2 gap-2 mb-4" id="statusButtons">
-        <button onclick="setOrderStatus('confirmed')" class="bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-medium transition-all">
-          <i class="fas fa-check ml-1"></i> مؤكدة
-        </button>
-        <button onclick="setOrderStatus('cancelled')" class="bg-red-600 hover:bg-red-700 text-white py-3 rounded-xl font-medium transition-all">
-          <i class="fas fa-times ml-1"></i> ملغاة
-        </button>
-        <button onclick="setOrderStatus('no_answer')" class="bg-yellow-600 hover:bg-yellow-700 text-white py-3 rounded-xl font-medium transition-all">
-          <i class="fas fa-phone-slash ml-1"></i> لا يجيب
-        </button>
-        <button onclick="setOrderStatus('callback')" class="bg-purple-600 hover:bg-purple-700 text-white py-3 rounded-xl font-medium transition-all">
-          <i class="fas fa-phone-volume ml-1"></i> إعادة اتصال
-        </button>
-        <button onclick="setOrderStatus('shipped')" class="bg-cyan-600 hover:bg-cyan-700 text-white py-3 rounded-xl font-medium transition-all">
-          <i class="fas fa-truck ml-1"></i> تم الشحن
-        </button>
-        <button onclick="setOrderStatus('delivered')" class="bg-emerald-700 hover:bg-emerald-800 text-white py-3 rounded-xl font-medium transition-all">
-          <i class="fas fa-check-double ml-1"></i> تم التوصيل
-        </button>
-        <button onclick="setOrderStatus('returned')" class="bg-red-800 hover:bg-red-900 text-white py-3 rounded-xl font-medium transition-all">
-          <i class="fas fa-rotate-left ml-1"></i> مرتجعة
-        </button>
-        <button onclick="setOrderStatus('duplicate')" class="bg-gray-600 hover:bg-gray-700 text-white py-3 rounded-xl font-medium transition-all">
-          <i class="fas fa-copy ml-1"></i> مكررة
-        </button>
+        <button onclick="setOrderStatus('confirmed')" class="bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-medium transition-all"><i class="fas fa-check ml-1"></i> مؤكدة</button>
+        <button onclick="setOrderStatus('cancelled')" class="bg-red-600 hover:bg-red-700 text-white py-3 rounded-xl font-medium transition-all"><i class="fas fa-times ml-1"></i> ملغاة</button>
+        <button onclick="setOrderStatus('no_answer')" class="bg-yellow-600 hover:bg-yellow-700 text-white py-3 rounded-xl font-medium transition-all"><i class="fas fa-phone-slash ml-1"></i> لا يجيب</button>
+        <button onclick="setOrderStatus('callback')" class="bg-purple-600 hover:bg-purple-700 text-white py-3 rounded-xl font-medium transition-all"><i class="fas fa-phone-volume ml-1"></i> إعادة اتصال</button>
+        <button onclick="setOrderStatus('shipped')" class="bg-cyan-600 hover:bg-cyan-700 text-white py-3 rounded-xl font-medium transition-all"><i class="fas fa-truck ml-1"></i> تم الشحن</button>
+        <button onclick="setOrderStatus('delivered')" class="bg-emerald-700 hover:bg-emerald-800 text-white py-3 rounded-xl font-medium transition-all"><i class="fas fa-check-double ml-1"></i> تم التوصيل</button>
+        <button onclick="setOrderStatus('returned')" class="bg-red-800 hover:bg-red-900 text-white py-3 rounded-xl font-medium transition-all"><i class="fas fa-rotate-left ml-1"></i> مرتجعة</button>
+        <button onclick="setOrderStatus('duplicate')" class="bg-gray-600 hover:bg-gray-700 text-white py-3 rounded-xl font-medium transition-all"><i class="fas fa-copy ml-1"></i> مكررة</button>
       </div>
 
       <div>
@@ -542,10 +489,11 @@
   </div>
 </div>
 
+<!-- منطقة الطباعة المخفية -->
+<div id="printArea" class="hidden"></div>
 
 <!-- =================== JAVASCRIPT =================== -->
 <script>
-// ============ GLOBAL STATE ============
 const API = '';
 let currentUser = null;
 let token = null;
@@ -554,7 +502,6 @@ let products = [];
 let currentOrderId = null;
 let searchTimeout = null;
 
-// ============ INIT ============
 document.addEventListener('DOMContentLoaded', () => {
   token = localStorage.getItem('token');
   currentUser = JSON.parse(localStorage.getItem('user') || 'null');
@@ -567,12 +514,10 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('currentUserName').textContent = currentUser.full_name;
   document.getElementById('currentUserRole').textContent = getRoleLabel(currentUser.role);
   
-  // إخفاء عناصر الأدمن
   if (currentUser.role !== 'admin') {
     document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
   }
 
-  // تاريخ اليوم
   const now = new Date();
   document.getElementById('currentDate').textContent = now.toLocaleDateString('ar-DZ', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
@@ -583,7 +528,6 @@ document.addEventListener('DOMContentLoaded', () => {
   loadDashboard();
 });
 
-// ============ API HELPERS ============
 async function apiCall(url, method = 'GET', body = null) {
   const options = {
     method,
@@ -607,7 +551,6 @@ async function apiCall(url, method = 'GET', body = null) {
   return data;
 }
 
-// ============ NAVIGATION ============
 function showSection(section) {
   document.querySelectorAll('[id^="section-"]').forEach(el => el.classList.add('hidden'));
   document.getElementById('section-' + section).classList.remove('hidden');
@@ -629,7 +572,6 @@ function showSection(section) {
   if (section === 'dashboard') loadDashboard();
 }
 
-// ============ DASHBOARD ============
 async function loadDashboard() {
   try {
     const data = await apiCall('/api/dashboard/stats');
@@ -642,12 +584,12 @@ async function loadDashboard() {
 function renderDashboardStats(data) {
   const t = data.today;
   const statsCards = [
-    { label: 'جديدة', value: t.new_orders, icon: 'fa-inbox', color: 'blue', bg: 'from-blue-600 to-blue-800' },
-    { label: 'مؤكدة', value: t.confirmed, icon: 'fa-check-circle', color: 'green', bg: 'from-green-600 to-green-800' },
-    { label: 'ملغاة', value: t.cancelled, icon: 'fa-times-circle', color: 'red', bg: 'from-red-600 to-red-800' },
-    { label: 'لا يجيب', value: t.no_answer, icon: 'fa-phone-slash', color: 'yellow', bg: 'from-yellow-600 to-yellow-800' },
-    { label: 'تم التوصيل', value: t.delivered, icon: 'fa-truck', color: 'emerald', bg: 'from-emerald-600 to-emerald-800' },
-    { label: 'مرتجعة', value: t.returned, icon: 'fa-rotate-left', color: 'rose', bg: 'from-rose-600 to-rose-800' },
+    { label: 'جديدة', value: t.new_orders, icon: 'fa-inbox', bg: 'from-blue-600 to-blue-800' },
+    { label: 'مؤكدة', value: t.confirmed, icon: 'fa-check-circle', bg: 'from-green-600 to-green-800' },
+    { label: 'ملغاة', value: t.cancelled, icon: 'fa-times-circle', bg: 'from-red-600 to-red-800' },
+    { label: 'لا يجيب', value: t.no_answer, icon: 'fa-phone-slash', bg: 'from-yellow-600 to-yellow-800' },
+    { label: 'تم التوصيل', value: t.delivered, icon: 'fa-truck', bg: 'from-emerald-600 to-emerald-800' },
+    { label: 'مرتجعة', value: t.returned, icon: 'fa-rotate-left', bg: 'from-rose-600 to-rose-800' },
   ];
 
   document.getElementById('statsGrid').innerHTML = statsCards.map(s => `
@@ -660,7 +602,6 @@ function renderDashboardStats(data) {
     </div>
   `).join('');
 
-  // Badge for new orders
   const badge = document.getElementById('newOrdersBadge');
   if (parseInt(t.new_orders) > 0) {
     badge.textContent = t.new_orders;
@@ -669,14 +610,11 @@ function renderDashboardStats(data) {
     badge.classList.add('hidden');
   }
 
-  // Agent Performance
   const perfDiv = document.getElementById('agentPerformance');
-  if (data.agentPerformance.length > 0) {
+  if (data.agentPerformance && data.agentPerformance.length > 0) {
     perfDiv.innerHTML = data.agentPerformance.map((a, i) => `
       <div class="flex items-center gap-3 bg-slate-800/50 rounded-xl p-3">
-        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
-          ${i + 1}
-        </div>
+        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm">${i + 1}</div>
         <div class="flex-1">
           <p class="font-medium text-sm">${a.full_name}</p>
           <div class="flex gap-3 mt-1 text-xs">
@@ -691,9 +629,8 @@ function renderDashboardStats(data) {
     perfDiv.innerHTML = '<p class="text-gray-500 text-center py-4">لا يوجد عمال</p>';
   }
 
-  // Low Stock
   const stockDiv = document.getElementById('lowStockAlerts');
-  if (data.lowStock.length > 0) {
+  if (data.lowStock && data.lowStock.length > 0) {
     stockDiv.innerHTML = data.lowStock.map(p => `
       <div class="flex items-center justify-between bg-red-900/20 border border-red-800/50 rounded-xl p-3">
         <div>
@@ -710,7 +647,6 @@ function renderDashboardStats(data) {
     stockDiv.innerHTML = '<p class="text-green-400 text-center py-4"><i class="fas fa-check-circle ml-2"></i>جميع المنتجات بمخزون كافي</p>';
   }
 
-  // Overall Stats
   const o = data.overall;
   document.getElementById('overallStats').innerHTML = `
     <div class="bg-slate-800/50 rounded-xl p-4 text-center">
@@ -732,7 +668,6 @@ function renderDashboardStats(data) {
   `;
 }
 
-// ============ ORDERS ============
 async function loadOrders(page = 1) {
   try {
     const status = document.getElementById('filterStatus').value;
@@ -752,52 +687,34 @@ async function loadOrders(page = 1) {
 function renderOrders(data) {
   const tbody = document.getElementById('ordersTableBody');
   
-  if (data.orders.length === 0) {
-    tbody.innerHTML = `
-      <tr><td colspan="11" class="text-center py-12 text-gray-500">
-        <i class="fas fa-inbox text-4xl mb-3 block"></i>لا توجد طلبيات
-      </td></tr>`;
+  if (!data.orders || data.orders.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="11" class="text-center py-12 text-gray-500"><i class="fas fa-inbox text-4xl mb-3 block"></i>لا توجد طلبيات</td></tr>`;
     document.getElementById('ordersCount').textContent = '0 طلبية';
     return;
   }
 
   tbody.innerHTML = data.orders.map(o => `
     <tr class="table-row border-b border-gray-800">
-      <td class="px-4 py-3">
-        <input type="checkbox" class="order-check rounded" value="${o.id}">
-      </td>
-      <td class="px-4 py-3">
-        <span class="text-blue-400 font-mono text-xs">${o.tracking_id}</span>
-      </td>
+      <td class="px-4 py-3"><input type="checkbox" class="order-check rounded" value="${o.id}"></td>
+      <td class="px-4 py-3"><span class="text-blue-400 font-mono text-xs">${o.tracking_id}</span></td>
       <td class="px-4 py-3 font-medium">${o.customer_name}</td>
       <td class="px-4 py-3">
         <div class="flex items-center gap-1">
           <span class="text-sm">${o.customer_phone}</span>
-          <a href="tel:${o.customer_phone}" class="text-green-500 hover:text-green-400">
-            <i class="fas fa-phone text-xs"></i>
-          </a>
-          <a href="https://wa.me/213${o.customer_phone.substring(1)}" target="_blank" 
-             class="text-green-500 hover:text-green-400">
-            <i class="fab fa-whatsapp text-sm"></i>
-          </a>
+          <a href="tel:${o.customer_phone}" class="text-green-500 hover:text-green-400"><i class="fas fa-phone text-xs"></i></a>
+          <a href="https://wa.me/213${o.customer_phone.substring(1)}" target="_blank" class="text-green-500 hover:text-green-400"><i class="fab fa-whatsapp text-sm"></i></a>
         </div>
       </td>
       <td class="px-4 py-3 text-sm">${o.wilaya_code || ''} - ${o.wilaya_name || ''}</td>
-      <td class="px-4 py-3 text-xs">
-        ${(o.items || []).map(it => `${it.product_name} (×${it.quantity})`).join('<br>')}
-      </td>
+      <td class="px-4 py-3 text-xs">${(o.items || []).map(it => `${it.product_name} (×${it.quantity})`).join('<br>')}</td>
       <td class="px-4 py-3 font-bold text-green-400">${formatMoney(o.total_amount)}</td>
-      <td class="px-4 py-3">
-        <span class="badge status-${o.status} text-white">${getStatusLabel(o.status)}</span>
-      </td>
+      <td class="px-4 py-3"><span class="badge status-${o.status} text-white">${getStatusLabel(o.status)}</span></td>
       <td class="px-4 py-3 text-sm text-gray-400">${o.assigned_to_name || '—'}</td>
       <td class="px-4 py-3 text-xs text-gray-400">${new Date(o.created_at).toLocaleDateString('ar-DZ')}</td>
       <td class="px-4 py-3 text-center">
         <div class="flex items-center justify-center gap-1">
-          <button onclick="openStatusModal(${o.id}, '${o.tracking_id}')" 
-                  class="bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 p-2 rounded-lg transition-colors" title="تغيير الحالة">
-            <i class="fas fa-edit text-xs"></i>
-          </button>
+          <button onclick="openStatusModal(${o.id}, '${o.tracking_id}')" class="bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 p-2 rounded-lg transition-colors" title="تغيير الحالة"><i class="fas fa-edit text-xs"></i></button>
+          <button onclick="printSingleBordereau(${o.id})" class="bg-amber-600/20 hover:bg-amber-600/40 text-amber-400 p-2 rounded-lg transition-colors mr-1" title="طباعة الوصل"><i class="fas fa-print text-xs"></i></button>
         </div>
       </td>
     </tr>
@@ -805,7 +722,6 @@ function renderOrders(data) {
 
   document.getElementById('ordersCount').textContent = `${data.total} طلبية`;
   
-  // Pagination
   const pagDiv = document.getElementById('pagination');
   if (data.totalPages > 1) {
     let pages = '';
@@ -823,7 +739,6 @@ function debounceSearch() {
   searchTimeout = setTimeout(() => loadOrders(), 400);
 }
 
-// Create Order
 async function createOrder(e) {
   e.preventDefault();
   const form = e.target;
@@ -872,7 +787,6 @@ async function createOrder(e) {
   }
 }
 
-// Product rows in order
 function addProductRow() {
   const container = document.getElementById('orderItemsContainer');
   const row = document.createElement('div');
@@ -880,7 +794,7 @@ function addProductRow() {
   
   const productOptions = products
     .filter(p => p.is_active)
-    .map(p => `<option value="${p.id}" data-price="${p.sale_price}" data-stock="${p.stock_quantity - p.reserved_quantity}">${p.name} (${formatMoney(p.sale_price)}) - متوفر: ${p.stock_quantity - p.reserved_quantity}</option>`)
+    .map(p => `<option value="${p.id}" data-price="${p.sale_price}">${p.name} (${formatMoney(p.sale_price)}) - متوفر: ${p.stock_quantity - p.reserved_quantity}</option>`)
     .join('');
 
   row.innerHTML = `
@@ -888,15 +802,10 @@ function addProductRow() {
       <option value="">اختر المنتج</option>
       ${productOptions}
     </select>
-    <input type="number" class="item-quantity input-field rounded-lg px-3 py-2 w-20 text-center text-sm" 
-           value="1" min="1" onchange="updateItemTotal(this)" onkeyup="updateItemTotal(this)">
+    <input type="number" class="item-quantity input-field rounded-lg px-3 py-2 w-20 text-center text-sm" value="1" min="1" onchange="updateItemTotal(this)" onkeyup="updateItemTotal(this)">
     <span class="item-total text-green-400 font-bold text-sm w-28 text-left">0 دج</span>
-    <button type="button" onclick="this.closest('.order-item-row').remove(); updateOrderTotal()" 
-            class="text-red-400 hover:text-red-300 p-1">
-      <i class="fas fa-trash text-sm"></i>
-    </button>
+    <button type="button" onclick="this.closest('.order-item-row').remove(); updateOrderTotal()" class="text-red-400 hover:text-red-300 p-1"><i class="fas fa-trash text-sm"></i></button>
   `;
-  
   container.appendChild(row);
 }
 
@@ -936,7 +845,6 @@ function updateDeliveryCost() {
   }
 }
 
-// Status
 function openStatusModal(orderId, trackingId) {
   currentOrderId = orderId;
   document.getElementById('statusOrderInfo').textContent = `الطلبية: ${trackingId}`;
@@ -957,7 +865,6 @@ async function setOrderStatus(status) {
   }
 }
 
-// Auto assign
 async function autoAssignOrders() {
   try {
     const data = await apiCall('/api/orders/auto-assign', 'POST');
@@ -969,13 +876,11 @@ async function autoAssignOrders() {
   }
 }
 
-// Select all
 function toggleSelectAll() {
   const checked = document.getElementById('selectAll').checked;
   document.querySelectorAll('.order-check').forEach(cb => cb.checked = checked);
 }
 
-// ============ PRODUCTS ============
 async function loadProducts() {
   try {
     products = await apiCall('/api/products');
@@ -987,11 +892,8 @@ async function loadProducts() {
 
 function renderProducts() {
   const grid = document.getElementById('productsGrid');
-  
-  if (products.length === 0) {
-    grid.innerHTML = `<div class="col-span-full text-center py-12 text-gray-500">
-      <i class="fas fa-box-open text-4xl mb-3 block"></i>لا توجد منتجات بعد
-    </div>`;
+  if (!products || products.length === 0) {
+    grid.innerHTML = `<div class="col-span-full text-center py-12 text-gray-500"><i class="fas fa-box-open text-4xl mb-3 block"></i>لا توجد منتجات بعد</div>`;
     return;
   }
 
@@ -1023,17 +925,6 @@ function renderProducts() {
           <p class="font-bold ${p.available_quantity <= 0 ? 'text-red-400' : 'text-emerald-400'}">${p.available_quantity}</p>
         </div>
       </div>
-      
-      <div class="mt-3 bg-slate-800/30 rounded-lg p-2">
-        <div class="flex justify-between text-xs text-gray-400 mb-1">
-          <span>المحجوز: ${p.reserved_quantity}</span>
-          <span>الربح/وحدة: ${formatMoney(p.sale_price - p.purchase_price)}</span>
-        </div>
-        <div class="w-full bg-gray-700 rounded-full h-2">
-          <div class="bg-gradient-to-r from-blue-500 to-green-500 h-2 rounded-full" 
-               style="width: ${p.stock_quantity > 0 ? Math.min((p.available_quantity / p.stock_quantity) * 100, 100) : 0}%"></div>
-        </div>
-      </div>
     </div>
   `).join('');
 }
@@ -1063,7 +954,6 @@ async function createProduct(e) {
   }
 }
 
-// ============ USERS ============
 async function loadUsers() {
   try {
     const users = await apiCall('/api/users');
@@ -1088,10 +978,7 @@ function renderUsers(users) {
         ${u.is_active ? 'نشط' : 'معطل'}
       </td>
       <td class="px-4 py-3 text-center">
-        <button onclick="toggleUserStatus(${u.id}, ${!u.is_active})" 
-                class="text-sm ${u.is_active ? 'text-red-400 hover:text-red-300' : 'text-green-400 hover:text-green-300'} transition-colors">
-          <i class="fas ${u.is_active ? 'fa-ban' : 'fa-check-circle'}"></i>
-        </button>
+        <button onclick="toggleUserStatus(${u.id}, ${!u.is_active})" class="text-sm ${u.is_active ? 'text-red-400' : 'text-green-400'}"><i class="fas ${u.is_active ? 'fa-ban' : 'fa-check-circle'}"></i></button>
       </td>
     </tr>
   `).join('');
@@ -1130,7 +1017,6 @@ async function toggleUserStatus(userId, newStatus) {
   }
 }
 
-// ============ WILAYAS ============
 async function loadWilayas() {
   try {
     wilayas = await apiCall('/api/wilayas');
@@ -1142,7 +1028,6 @@ async function loadWilayas() {
   }
 }
 
-// ============ MODALS ============
 function openNewOrderModal() {
   document.getElementById('newOrderModal').classList.remove('hidden');
   if (document.querySelectorAll('.order-item-row').length === 0) {
@@ -1150,32 +1035,16 @@ function openNewOrderModal() {
   }
 }
 
-function openNewProductModal() {
-  document.getElementById('newProductModal').classList.remove('hidden');
-}
+function openNewProductModal() { document.getElementById('newProductModal').classList.remove('hidden'); }
+function openNewUserModal() { document.getElementById('newUserModal').classList.remove('hidden'); }
+function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
 
-function openNewUserModal() {
-  document.getElementById('newUserModal').classList.remove('hidden');
-}
-
-function closeModal(id) {
-  document.getElementById(id).classList.add('hidden');
-}
-
-// ============ UTILITIES ============
 function formatMoney(amount) {
-  return new Intl.NumberFormat('ar-DZ', { 
-    style: 'decimal', 
-    minimumFractionDigits: 0 
-  }).format(amount || 0) + ' دج';
+  return new Intl.NumberFormat('ar-DZ', { style: 'decimal', minimumFractionDigits: 0 }).format(amount || 0) + ' دج';
 }
 
 function getStatusLabel(status) {
-  const labels = {
-    new: 'جديدة', confirmed: 'مؤكدة', cancelled: 'ملغاة',
-    no_answer: 'لا يجيب', callback: 'إعادة اتصال', shipped: 'تم الشحن',
-    delivered: 'تم التوصيل', returned: 'مرتجعة', duplicate: 'مكررة', exchange: 'استبدال'
-  };
+  const labels = { new: 'جديدة', confirmed: 'مؤكدة', cancelled: 'ملغاة', no_answer: 'لا يجيب', callback: 'إعادة اتصال', shipped: 'تم الشحن', delivered: 'تم التوصيل', returned: 'مرتجعة', duplicate: 'مكررة', exchange: 'استبدال' };
   return labels[status] || status;
 }
 
@@ -1191,8 +1060,7 @@ function showToast(message, type = 'success') {
   
   msg.textContent = message;
   icon.className = type === 'success' ? 'fas fa-check-circle text-green-500' :
-                   type === 'error' ? 'fas fa-exclamation-circle text-red-500' :
-                   'fas fa-exclamation-triangle text-yellow-500';
+                   type === 'error' ? 'fas fa-exclamation-circle text-red-500' : 'fas fa-exclamation-triangle text-yellow-500';
   
   toast.classList.remove('hidden');
   setTimeout(() => toast.classList.add('hidden'), 4000);
@@ -1202,26 +1070,21 @@ function logout() {
   localStorage.clear();
   window.location.href = '/';
 }
-</script>
-  // ============ PRINT BORDEREAU FUNCTIONS ============
 
-// طباعة وصل فردي
+// ============ PRINT BORDEREAU FUNCTIONS ============
 async function printSingleBordereau(orderId) {
   try {
-    const data = await apiCall(`/api/orders?search=`); // جلب الطلبيات
+    const data = await apiCall(`/api/orders?limit=100`);
     const order = data.orders.find(o => o.id === orderId);
     if (!order) return showToast('الطلبية غير موجودة', 'error');
 
     generateBordereauHTML([order]);
-    setTimeout(() => {
-      window.print();
-    }, 300);
+    setTimeout(() => { window.print(); }, 300);
   } catch (err) {
     showToast('خطأ في تحضير الوصل للطباعة', 'error');
   }
 }
 
-// طباعة عدة وصليات محددة (Bulk Print)
 async function printSelectedBordereaux() {
   const selectedIds = Array.from(document.querySelectorAll('.order-check:checked')).map(cb => parseInt(cb.value));
   if (selectedIds.length === 0) {
@@ -1233,24 +1096,20 @@ async function printSelectedBordereaux() {
     const selectedOrders = data.orders.filter(o => selectedIds.includes(o.id));
 
     generateBordereauHTML(selectedOrders);
-    setTimeout(() => {
-      window.print();
-    }, 500);
+    setTimeout(() => { window.print(); }, 500);
   } catch (err) {
     showToast('خطأ في تحضير الوصليات', 'error');
   }
 }
 
-// توليد هيكل الوصل (HTML)
 function generateBordereauHTML(ordersList) {
   const printContainer = document.getElementById('printArea');
   
-  let htmlContent = ordersList.map((o, index) => {
+  let htmlContent = ordersList.map((o) => {
     const itemsList = (o.items || []).map(i => `<li>- ${i.product_name} <strong>(×${i.quantity})</strong></li>`).join('');
     
     return `
       <div class="page-break border-4 border-black p-4 m-2 text-black bg-white" style="width: 100mm; min-height: 145mm; font-family: 'Tajawal', sans-serif; dir: rtl;">
-        <!-- Header -->
         <div class="flex justify-between items-center border-b-2 border-black pb-2 mb-2">
           <div>
             <h2 class="text-xl font-black uppercase tracking-wider">متجر التجارة الإلكترونية</h2>
@@ -1262,21 +1121,18 @@ function generateBordereauHTML(ordersList) {
           </div>
         </div>
 
-        <!-- Barcode Area -->
         <div class="text-center my-2 bg-gray-100 p-1 border border-black rounded">
           <svg id="barcode-${o.id}" class="w-full h-12"></svg>
         </div>
 
-        <!-- Customer Info -->
         <div class="border-2 border-black p-2 mb-2 rounded bg-gray-50">
           <p class="text-xs text-gray-600 font-bold">معلومات الزبون:</p>
           <p class="text-base font-black">${o.customer_name}</p>
           <p class="text-sm font-black dir-ltr text-right">📱 ${o.customer_phone} ${o.customer_phone2 ? ' / ' + o.customer_phone2 : ''}</p>
-          <p class="text-sm font-bold mt-1">📍 ${o.wilaya_code} - ${o.wilaya_name} | ${o.commune || ''}</p>
+          <p class="text-sm font-bold mt-1">📍 ${o.wilaya_code || ''} - ${o.wilaya_name || ''} | ${o.commune || ''}</p>
           <p class="text-xs font-medium">${o.address || ''}</p>
         </div>
 
-        <!-- Order Items -->
         <div class="border border-black p-2 mb-2 rounded min-h-[35mm]">
           <p class="text-xs text-gray-600 font-bold border-b border-gray-300 pb-1 mb-1">محتوى الطرد:</p>
           <ul class="text-xs space-y-1 font-bold">
@@ -1284,13 +1140,11 @@ function generateBordereauHTML(ordersList) {
           </ul>
         </div>
 
-        <!-- Total Price -->
         <div class="border-2 border-black p-2 text-center rounded bg-black text-white">
           <span class="text-xs block font-bold">المبلغ المطلوب تحصيله (COD):</span>
           <span class="text-2xl font-black">${formatMoney(o.total_amount)}</span>
         </div>
 
-        <!-- Footer -->
         <div class="mt-2 text-center text-[9px] font-bold text-gray-700">
           شكراً لتسوقكم معنا! يرجى التأكد من الطرد قبل الدفع.
         </div>
@@ -1300,7 +1154,6 @@ function generateBordereauHTML(ordersList) {
 
   printContainer.innerHTML = htmlContent;
 
-  // توليد الباركود لكل وصل
   ordersList.forEach(o => {
     JsBarcode(`#barcode-${o.id}`, o.tracking_id, {
       format: "CODE128",
@@ -1312,24 +1165,6 @@ function generateBordereauHTML(ordersList) {
     });
   });
 }
-<!-- =================== PRINT BORDEREAU STYLES & CONTAINER =================== -->
-<style>
-  @media print {
-    body * { visibility: hidden !important; }
-    #printArea, #printArea * { visibility: visible !important; }
-    #printArea {
-      position: absolute;
-      left: 0;
-      top: 0;
-      width: 100%;
-      background: white !important;
-      color: black !important;
-    }
-    .page-break { page-break-after: always; }
-  }
-</style>
-
-<!-- منطقة الطباعة المخفية -->
-<div id="printArea" class="hidden"></div>
+</script>
 </body>
-            </html>
+  </html>
