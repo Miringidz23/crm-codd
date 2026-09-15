@@ -1,14 +1,14 @@
 {
   "name": "cod-crm-system",
-  "version": "1.0.0",
-  "description": "Simple E-commerce Landing Page with CRM for COD",
+  "version": "2.0.0",
+  "description": "Professional COD CRM System with PostgreSQL",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
     "express": "^4.18.2",
-    "sqlite3": "^5.1.7",
+    "pg": "^8.11.3",
     "cors": "^2.8.5"
   }
 }
