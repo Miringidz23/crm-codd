@@ -599,6 +599,11 @@ app.post('/api/orders', authenticateToken, async (req, res) => {
 
     // جلب تكاليف التوصيل
     const wilaya = await client.query('SELECT * FROM wilayas WHERE id = $1', [wilaya_id]);
+    if (wilaya.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'الولاية المختارة غير موجودة' });
+    }
+
     const delivery_cost = delivery_type === 'home' 
       ? wilaya.rows[0].delivery_cost_home 
       : wilaya.rows[0].delivery_cost_desk;
@@ -613,7 +618,7 @@ app.post('/api/orders', authenticateToken, async (req, res) => {
       );
       if (product.rows.length === 0) {
         await client.query('ROLLBACK');
-        return res.status(400).json({ error: `المنتج ${item.product_id} غير موجود` });
+        return res.status(400).json({ error: `المنتج غير موجود` });
       }
 
       const p = product.rows[0];
@@ -636,17 +641,18 @@ app.post('/api/orders', authenticateToken, async (req, res) => {
       });
     }
 
-    // التوزيع التلقائي على الـ Agent (Round Robin)
+    // التوزيع التلقائي على الـ Agent (معدل ومصحح لـ PostgreSQL)
     let assignedTo = null;
     if (req.user.role === 'admin' || req.user.role === 'supervisor') {
       const agents = await client.query(
-        `SELECT u.id, u.max_daily_orders,
-                (SELECT COUNT(*) FROM orders WHERE assigned_to = u.id 
-                 AND DATE(created_at) = CURRENT_DATE AND status = 'new') as today_count
-         FROM users u 
-         WHERE u.role = 'agent' AND u.is_active = true
-         HAVING (SELECT COUNT(*) FROM orders WHERE assigned_to = u.id 
-                 AND DATE(created_at) = CURRENT_DATE AND status = 'new') < u.max_daily_orders
+        `SELECT id FROM (
+           SELECT u.id, u.max_daily_orders,
+                  (SELECT COUNT(*) FROM orders WHERE assigned_to = u.id 
+                   AND DATE(created_at) = CURRENT_DATE AND status = 'new') as today_count
+           FROM users u 
+           WHERE u.role = 'agent' AND u.is_active = true
+         ) agent_stats
+         WHERE today_count < max_daily_orders
          ORDER BY today_count ASC
          LIMIT 1`
       );
@@ -715,12 +721,11 @@ app.post('/api/orders', authenticateToken, async (req, res) => {
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('Create order error:', err);
-    res.status(500).json({ error: 'خطأ في إنشاء الطلبية' });
+    res.status(500).json({ error: err.message || 'خطأ في إنشاء الطلبية' });
   } finally {
     client.release();
   }
 });
-
 // تحديث حالة الطلبية
 app.put('/api/orders/:id/status', authenticateToken, async (req, res) => {
   const client = await pool.connect();
