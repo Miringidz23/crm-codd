@@ -11,13 +11,11 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// الاتصال بقاعدة البيانات السحابية PostgreSQL
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: { rejectUnauthorized: false }
 });
 
-// إنشاء الجداول تلقائياً
 async function initDB() {
     try {
         await pool.query(`
@@ -45,7 +43,8 @@ async function initDB() {
                 shipping_cost INTEGER DEFAULT 600,
                 ad_cost INTEGER DEFAULT 500,
                 image_url TEXT DEFAULT 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&q=80',
-                password TEXT DEFAULT 'admin123',
+                admin_pass TEXT DEFAULT 'admin123',
+                agent_pass TEXT DEFAULT 'agent123',
                 telegram_token TEXT DEFAULT '',
                 telegram_chat_id TEXT DEFAULT ''
             )
@@ -55,9 +54,9 @@ async function initDB() {
         if (parseInt(checkSettings.rows[0].count) === 0) {
             await pool.query(`INSERT INTO settings (id) VALUES (1)`);
         }
-        console.log("Cloud Database Initialized Successfully!");
+        console.log("PostgreSQL Database Connected & Initialized!");
     } catch (err) {
-        console.error("Database Init Error:", err);
+        console.error("DB Init Error:", err);
     }
 }
 
@@ -92,11 +91,11 @@ app.get('/api/settings', async (req, res) => {
 });
 
 app.put('/api/settings', async (req, res) => {
-    const { product_name, price, buy_price, shipping_cost, ad_cost, image_url, password, telegram_token, telegram_chat_id } = req.body;
+    const { product_name, price, buy_price, shipping_cost, ad_cost, image_url, admin_pass, agent_pass, telegram_token, telegram_chat_id } = req.body;
     try {
         await pool.query(
-            `UPDATE settings SET product_name=$1, price=$2, buy_price=$3, shipping_cost=$4, ad_cost=$5, image_url=$6, password=$7, telegram_token=$8, telegram_chat_id=$9 WHERE id=1`,
-            [product_name, price, buy_price, shipping_cost, ad_cost, image_url, password, telegram_token, telegram_chat_id]
+            `UPDATE settings SET product_name=$1, price=$2, buy_price=$3, shipping_cost=$4, ad_cost=$5, image_url=$6, admin_pass=$7, agent_pass=$8, telegram_token=$9, telegram_chat_id=$10 WHERE id=1`,
+            [product_name, price, buy_price, shipping_cost, ad_cost, image_url, admin_pass, agent_pass, telegram_token, telegram_chat_id]
         );
         res.json({ success: true });
     } catch (err) {
@@ -104,14 +103,18 @@ app.put('/api/settings', async (req, res) => {
     }
 });
 
+// تسجيل الدخول مع تحديد نوع الحساب (Admin أو Agent)
 app.post('/api/login', async (req, res) => {
     const { password } = req.body;
     try {
-        const result = await pool.query('SELECT password FROM settings WHERE id = 1');
-        if (result.rows[0] && result.rows[0].password === password) {
-            res.json({ success: true });
+        const result = await pool.query('SELECT admin_pass, agent_pass FROM settings WHERE id = 1');
+        const s = result.rows[0];
+        if (password === s.admin_pass) {
+            res.json({ success: true, role: 'admin' });
+        } else if (password === s.agent_pass) {
+            res.json({ success: true, role: 'agent' });
         } else {
-            res.status(401).json({ success: false, message: 'كلمة السر غير صحيحة' });
+            res.status(401).json({ success: false, message: 'كلمة السر خاطئة' });
         }
     } catch (err) {
         res.status(500).json({ error: err.message });
