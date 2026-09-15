@@ -4,12 +4,21 @@ const cors = require('cors');
 const path = require('path');
 
 const app = express();
-// التعديل المهم هنا: استخدام بورت السيرفر أو 3000 محليا
 const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
+
+// توجيه الرابط الرئيسي ديريكت لصفحة المتجر
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// توجيه رابط /crm ديريكت لصفحة الـ CRM
+app.get('/crm', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'crm.html'));
+});
 
 // إنشاء قاعدة البيانات
 const db = new sqlite3.Database('./orders.db', (err) => {
@@ -72,7 +81,6 @@ app.get('/api/export-csv', (req, res) => {
     });
 });
 
-// تشغيل السيرفر
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server is running on port ${PORT}`);
 });
