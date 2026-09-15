@@ -10,9 +10,28 @@
   <!-- مكتبة توليد الباركود للوصل -->
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
   <style>
+
     * { font-family: 'Tajawal', sans-serif; }
     body { background: #0f172a; color: #e2e8f0; }
     
+        /* Print Bordereau Styles */
+    @media print {
+      body * {
+        visibility: hidden !important;
+      }
+      #printArea, #printArea * {
+        visibility: visible !important;
+      }
+      #printArea {
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 100% !important;
+        background: white !important;
+        color: black !important;
+      }
+      .page-break { page-break-after: always; break-after: page; }
+    }
     .sidebar { background: #1e293b; border-left: 1px solid #334155; }
     .sidebar-item { transition: all 0.2s; }
     .sidebar-item:hover, .sidebar-item.active { background: #334155; color: #60a5fa; }
@@ -1071,7 +1090,7 @@ function logout() {
   window.location.href = '/';
 }
 
-// ============ PRINT BORDEREAU FUNCTIONS (FIXED FOR MOBILE) ============
+  // ============ PRINT BORDEREAU FUNCTIONS ============
 
 // طباعة وصل فردي
 async function printSingleBordereau(orderId) {
@@ -1081,7 +1100,7 @@ async function printSingleBordereau(orderId) {
     const order = data.orders.find(o => o.id === orderId);
     if (!order) return showToast('الطلبية غير موجودة', 'error');
 
-    printBordereauxNative([order]);
+    generateBordereauHTML([order]);
   } catch (err) {
     showToast('خطأ في تحضير الوصل للطباعة', 'error');
   }
@@ -1099,62 +1118,31 @@ async function printSelectedBordereaux() {
     const data = await apiCall(`/api/orders?limit=100`);
     const selectedOrders = data.orders.filter(o => selectedIds.includes(o.id));
 
-    printBordereauxNative(selectedOrders);
+    generateBordereauHTML(selectedOrders);
   } catch (err) {
     showToast('خطأ في تحضير الوصليات', 'error');
   }
 }
 
-// محرك الطباعة المعزول عبر Iframe (يمنع الصفحة البيضاء 100%)
-function printBordereauxNative(ordersList) {
-  // حذف أي إطار قديم
-  let oldIframe = document.getElementById('printIframe');
-  if (oldIframe) oldIframe.remove();
+// توليد الوصل والباركود مباشرة
+function generateBordereauHTML(ordersList) {
+  const printContainer = document.getElementById('printArea');
+  if (!printContainer) return;
 
-  // إنشاء إطار مخفي مستقل
-  const iframe = document.createElement('iframe');
-  iframe.id = 'printIframe';
-  iframe.style.position = 'fixed';
-  iframe.style.right = '0';
-  iframe.style.bottom = '0';
-  iframe.style.width = '0';
-  iframe.style.height = '0';
-  iframe.style.border = '0';
-  document.body.appendChild(iframe);
+  let htmlContent = ordersList.map((o) => {
+    const itemsList = (o.items || []).map(i => `<li style="font-size:12px; font-weight:bold; margin-bottom:2px; color:#000;">• ${i.product_name} <strong>(×${i.quantity})</strong></li>`).join('');
+    const formattedMoney = formatMoney(o.total_amount);
 
-  const doc = iframe.contentWindow.document;
-
-  let htmlContent = `
-    <!DOCTYPE html>
-    <html dir="rtl" lang="ar">
-    <head>
-      <meta charset="UTF-8">
-      <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@700;900&display=swap" rel="stylesheet">
-      <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"><\/script>
-      <style>
-        @page { size: auto; margin: 0; }
-        * { box-sizing: border-box; font-family: 'Tajawal', sans-serif; }
-        body { margin: 0; padding: 10px; background: #ffffff !important; color: #000000 !important; }
-        .page { width: 95mm; min-height: 140mm; border: 3px solid #000; padding: 10px; margin: 0 auto 15px auto; page-break-after: always; background: #fff; }
-        .border-box { border: 2px solid #000; padding: 6px; margin-bottom: 8px; border-radius: 4px; }
-      </style>
-    </head>
-    <body>
-  `;
-
-  ordersList.forEach(o => {
-    const itemsList = (o.items || []).map(i => `<li style="font-size:12px; font-weight:bold; margin-bottom:2px;">• ${i.product_name} <strong>(×${i.quantity})</strong></li>`).join('');
-    const formattedMoney = new Intl.NumberFormat('ar-DZ', { style: 'decimal', minimumFractionDigits: 0 }).format(o.total_amount || 0) + ' دج';
-
-    htmlContent += `
-      <div class="page">
+    return `
+      <div class="page-break" style="width: 95mm; min-height: 140mm; border: 3px solid #000; padding: 10px; margin: 0 auto 15px auto; background: #ffffff !important; color: #000000 !important; font-family: 'Tajawal', sans-serif; direction: rtl;">
+        
         <!-- Header -->
         <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #000; padding-bottom:5px; margin-bottom:8px;">
           <div>
-            <h2 style="font-size:16px; font-weight:900; margin:0;">متجر التجارة الإلكترونية</h2>
-            <p style="font-size:11px; font-weight:bold; margin:0;">وصل تسليم - COD Algeria</p>
+            <h2 style="font-size:16px; font-weight:900; margin:0; color:#000;">متجر التجارة الإلكترونية</h2>
+            <p style="font-size:11px; font-weight:bold; margin:0; color:#000;">وصل تسليم - COD Algeria</p>
           </div>
-          <div style="text-align:left; font-size:10px; font-weight:bold;">
+          <div style="text-align:left; font-size:10px; font-weight:bold; color:#000;">
             <div>التاريخ: ${new Date(o.created_at).toLocaleDateString('ar-DZ')}</div>
             <div>التوصيل: ${o.delivery_type === 'home' ? 'منزل 🏠' : 'مكتب 🏢'}</div>
           </div>
@@ -1166,24 +1154,24 @@ function printBordereauxNative(ordersList) {
         </div>
 
         <!-- Customer Info -->
-        <div class="border-box" style="background:#fafafa;">
+        <div style="border:2px solid #000; padding:6px; margin-bottom:8px; border-radius:4px; background:#fafafa; color:#000;">
           <div style="font-size:10px; color:#555; font-weight:bold;">معلومات الزبون:</div>
           <div style="font-size:15px; font-weight:900; color:#000;">${o.customer_name}</div>
-          <div style="font-size:13px; font-weight:900; direction:ltr; text-align:right;">📱 ${o.customer_phone} ${o.customer_phone2 ? ' / ' + o.customer_phone2 : ''}</div>
-          <div style="font-size:12px; font-weight:bold; margin-top:3px;">📍 ${o.wilaya_code || ''} - ${o.wilaya_name || ''} | ${o.commune || ''}</div>
-          <div style="font-size:11px;">${o.address || ''}</div>
+          <div style="font-size:13px; font-weight:900; direction:ltr; text-align:right; color:#000;">📱 ${o.customer_phone} ${o.customer_phone2 ? ' / ' + o.customer_phone2 : ''}</div>
+          <div style="font-size:12px; font-weight:bold; margin-top:3px; color:#000;">📍 ${o.wilaya_code || ''} - ${o.wilaya_name || ''} | ${o.commune || ''}</div>
+          <div style="font-size:11px; color:#000;">${o.address || ''}</div>
         </div>
 
         <!-- Order Items -->
-        <div class="border-box" style="min-height:30mm;">
+        <div style="border:1px solid #000; padding:6px; margin-bottom:8px; border-radius:4px; min-height:30mm; color:#000;">
           <div style="font-size:10px; color:#555; font-weight:bold; border-bottom:1px solid #ccc; padding-bottom:3px; margin-bottom:4px;">محتوى الطرد:</div>
-          <ul style="list-style:none; padding:0; margin:0;">
+          <ul style="list-style:none; padding:0; margin:0; color:#000;">
             ${itemsList}
           </ul>
         </div>
 
         <!-- COD Amount -->
-        <div style="border:2px solid #000; padding:6px; text-align:center; border-radius:4px; background:#000; color:#fff;">
+        <div style="border:2px solid #000; padding:6px; text-align:center; border-radius:4px; background:#000; color:#fff !important;">
           <span style="font-size:10px; display:block; font-weight:bold;">المبلغ المطلوب تحصيله (COD):</span>
           <span style="font-size:22px; font-weight:900;">${formattedMoney}</span>
         </div>
@@ -1194,25 +1182,33 @@ function printBordereauxNative(ordersList) {
         </div>
       </div>
     `;
+  }).join('');
+
+  // 1. حط الـ HTML في الحاوية
+  printContainer.innerHTML = htmlContent;
+
+  // 2. ولد الباركود فوراً
+  ordersList.forEach(o => {
+    try {
+      JsBarcode(`#barcode-${o.id}`, o.tracking_id, {
+        format: "CODE128",
+        width: 2,
+        height: 40,
+        displayValue: true,
+        fontSize: 12,
+        margin: 2
+      });
+    } catch(e) { 
+      console.error('Barcode error:', e); 
+    }
   });
 
-  htmlContent += `
-      <script>
-        window.onload = function() {
-          const orders = ${JSON.stringify(ordersList)};
-          orders.forEach(o => {
-            try {
-              JsBarcode("#barcode-" + o.id, o.tracking_id, {
-                format: "CODE128", width: 2, height: 40, displayValue: true, fontSize: 12, margin: 2
-              });
-            } catch(e) { console.error(e); }
-          });
+  // 3. افتح نافذة الطباعة
+  setTimeout(() => {
+    window.print();
+  }, 300);
+  }
 
-          setTimeout(function() {
-            window.focus();
-            window.print();
-          }, 500);
-        };
       <\/script>
     </body>
     </html>
