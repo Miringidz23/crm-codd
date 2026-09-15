@@ -1,5 +1,5 @@
 const express = require('express');
-const sqlite3 = require('sqlite3').verbose();
+const { Pool } = require('pg');
 const cors = require('cors');
 const path = require('path');
 const https = require('https');
@@ -11,57 +11,60 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// قاعدة البيانات
-const db = new sqlite3.Database('./orders.db', (err) => {
-    if (err) console.error('Database connection error:', err);
-    else console.log('SQLite Database Connected.');
+// الاتصال بقاعدة البيانات السحابية PostgreSQL
+const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: { rejectUnauthorized: false }
 });
 
-// جدول الطلبيات والإعدادات
-db.serialize(() => {
-    db.run(`
-        CREATE TABLE IF NOT EXISTS orders (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT,
-            phone TEXT,
-            wilaya TEXT,
-            commune TEXT,
-            product TEXT,
-            quantity INTEGER,
-            price INTEGER,
-            status TEXT DEFAULT 'جديد',
-            notes TEXT DEFAULT '',
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-    `);
+// إنشاء الجداول تلقائياً
+async function initDB() {
+    try {
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS orders (
+                id SERIAL PRIMARY KEY,
+                name TEXT,
+                phone TEXT,
+                wilaya TEXT,
+                commune TEXT,
+                product TEXT,
+                quantity INTEGER,
+                price INTEGER,
+                status TEXT DEFAULT 'جديد',
+                notes TEXT DEFAULT '',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
 
-    db.run(`
-        CREATE TABLE IF NOT EXISTS settings (
-            id INTEGER PRIMARY KEY,
-            product_name TEXT DEFAULT 'Smart Watch Series 9',
-            price INTEGER DEFAULT 4500,
-            buy_price INTEGER DEFAULT 2000,
-            shipping_cost INTEGER DEFAULT 600,
-            ad_cost INTEGER DEFAULT 500,
-            image_url TEXT DEFAULT 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&q=80',
-            password TEXT DEFAULT 'admin123',
-            telegram_token TEXT DEFAULT '',
-            telegram_chat_id TEXT DEFAULT ''
-        )
-    `);
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS settings (
+                id INTEGER PRIMARY KEY,
+                product_name TEXT DEFAULT 'Smart Watch Series 9',
+                price INTEGER DEFAULT 4500,
+                buy_price INTEGER DEFAULT 2000,
+                shipping_cost INTEGER DEFAULT 600,
+                ad_cost INTEGER DEFAULT 500,
+                image_url TEXT DEFAULT 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&q=80',
+                password TEXT DEFAULT 'admin123',
+                telegram_token TEXT DEFAULT '',
+                telegram_chat_id TEXT DEFAULT ''
+            )
+        `);
 
-    // إدخال إعدادات افتراضية إذا كانت فارغة
-    db.get('SELECT COUNT(*) as count FROM settings', (err, row) => {
-        if (row.count === 0) {
-            db.run(`INSERT INTO settings (id) VALUES (1)`);
+        const checkSettings = await pool.query('SELECT COUNT(*) FROM settings');
+        if (parseInt(checkSettings.rows[0].count) === 0) {
+            await pool.query(`INSERT INTO settings (id) VALUES (1)`);
         }
-    });
-});
+        console.log("Cloud Database Initialized Successfully!");
+    } catch (err) {
+        console.error("Database Init Error:", err);
+    }
+}
 
-// دالة إرسال إشعار التلغرام
+initDB();
+
 function sendTelegramNotification(order, settings) {
     if (!settings.telegram_token || !settings.telegram_chat_id) return;
-
     const message = encodeURIComponent(
         `🥳 *طلب جديد في المتجر!*\n\n` +
         `👤 *الاسم:* ${order.name}\n` +
@@ -70,95 +73,103 @@ function sendTelegramNotification(order, settings) {
         `🛍️ *المنتج:* ${order.product}\n` +
         `💰 *السعر:* ${order.price} د.ج`
     );
-
     const url = `https://api.telegram.org/bot${settings.telegram_token}/sendMessage?chat_id=${settings.telegram_chat_id}&text=${message}&parse_mode=Markdown`;
-
-    https.get(url, (res) => {}).on('error', (e) => console.error(e));
+    https.get(url, () => {}).on('error', (e) => console.error(e));
 }
 
-// 🌐 Routes
+// Routes
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// جلب إعدادات المتجر
-app.get('/api/settings', (req, res) => {
-    db.get('SELECT * FROM settings WHERE id = 1', (err, row) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json(row);
-    });
+app.get('/api/settings', async (req, res) => {
+    try {
+        const result = await pool.query('SELECT * FROM settings WHERE id = 1');
+        res.json(result.rows[0]);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
-// تحديث الإعدادات
-app.put('/api/settings', (req, res) => {
+app.put('/api/settings', async (req, res) => {
     const { product_name, price, buy_price, shipping_cost, ad_cost, image_url, password, telegram_token, telegram_chat_id } = req.body;
-    const query = `UPDATE settings SET product_name=?, price=?, buy_price=?, shipping_cost=?, ad_cost=?, image_url=?, password=?, telegram_token=?, telegram_chat_id=? WHERE id=1`;
-    db.run(query, [product_name, price, buy_price, shipping_cost, ad_cost, image_url, password, telegram_token, telegram_chat_id], function(err) {
-        if (err) return res.status(500).json({ error: err.message });
+    try {
+        await pool.query(
+            `UPDATE settings SET product_name=$1, price=$2, buy_price=$3, shipping_cost=$4, ad_cost=$5, image_url=$6, password=$7, telegram_token=$8, telegram_chat_id=$9 WHERE id=1`,
+            [product_name, price, buy_price, shipping_cost, ad_cost, image_url, password, telegram_token, telegram_chat_id]
+        );
         res.json({ success: true });
-    });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
-// تسجيل الدخول للـ CRM
-app.post('/api/login', (req, res) => {
+app.post('/api/login', async (req, res) => {
     const { password } = req.body;
-    db.get('SELECT password FROM settings WHERE id = 1', (err, row) => {
-        if (row && row.password === password) {
+    try {
+        const result = await pool.query('SELECT password FROM settings WHERE id = 1');
+        if (result.rows[0] && result.rows[0].password === password) {
             res.json({ success: true });
         } else {
             res.status(401).json({ success: false, message: 'كلمة السر غير صحيحة' });
         }
-    });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
-// إضافة طلب جديد
-app.post('/api/orders', (req, res) => {
+app.post('/api/orders', async (req, res) => {
     const { name, phone, wilaya, commune } = req.body;
-    
-    db.get('SELECT * FROM settings WHERE id = 1', (err, settings) => {
-        const query = `INSERT INTO orders (name, phone, wilaya, commune, product, quantity, price) VALUES (?, ?, ?, ?, ?, ?, ?)`;
-        db.run(query, [name, phone, wilaya, commune, settings.product_name, 1, settings.price], function(err) {
-            if (err) return res.status(500).json({ error: err.message });
-            
-            const newOrder = { name, phone, wilaya, commune, product: settings.product_name, price: settings.price };
-            sendTelegramNotification(newOrder, settings);
-            
-            res.json({ success: true, orderId: this.lastID });
-        });
-    });
+    try {
+        const setRes = await pool.query('SELECT * FROM settings WHERE id = 1');
+        const settings = setRes.rows[0];
+        
+        const insertRes = await pool.query(
+            `INSERT INTO orders (name, phone, wilaya, commune, product, quantity, price) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
+            [name, phone, wilaya, commune, settings.product_name, 1, settings.price]
+        );
+
+        sendTelegramNotification({ name, phone, wilaya, commune, product: settings.product_name, price: settings.price }, settings);
+        res.json({ success: true, orderId: insertRes.rows[0].id });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
-// جلب كل الطلبيات
-app.get('/api/orders', (req, res) => {
-    db.all('SELECT * FROM orders ORDER BY id DESC', [], (err, rows) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json(rows);
-    });
+app.get('/api/orders', async (req, res) => {
+    try {
+        const result = await pool.query('SELECT * FROM orders ORDER BY id DESC');
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
-// تحديث حالة الطلب
-app.put('/api/orders/:id', (req, res) => {
+app.put('/api/orders/:id', async (req, res) => {
     const { status, notes } = req.body;
     const { id } = req.params;
-    db.run(`UPDATE orders SET status = ?, notes = ? WHERE id = ?`, [status, notes, id], function(err) {
-        if (err) return res.status(500).json({ error: err.message });
+    try {
+        await pool.query(`UPDATE orders SET status = $1, notes = $2 WHERE id = $3`, [status, notes, id]);
         res.json({ success: true });
-    });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
-// تصدير CSV
-app.get('/api/export-csv', (req, res) => {
-    db.all('SELECT * FROM orders WHERE status = "مؤكد"', [], (err, rows) => {
-        if (err) return res.status(500).json({ error: err.message });
+app.get('/api/export-csv', async (req, res) => {
+    try {
+        const result = await pool.query('SELECT * FROM orders WHERE status = \'مؤكد\'');
         let csv = '\uFEFF';
         csv += 'رقم الطلب,الاسم,الهاتف,الولاية,البلدية,المنتج,الكمية,السعر الإجمالي\n';
-        rows.forEach(r => {
+        result.rows.forEach(r => {
             csv += `"${r.id}","${r.name}","${r.phone}","${r.wilaya}","${r.commune}","${r.product}","${r.quantity}","${r.price}"\n`;
         });
         res.setHeader('Content-Type', 'text/csv; charset=utf-8');
         res.setHeader('Content-Disposition', 'attachment; filename=confirmed_orders.csv');
         res.status(200).send(csv);
-    });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 app.listen(PORT, '0.0.0.0', () => {
