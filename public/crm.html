@@ -432,6 +432,47 @@
             toggleModal('settingsModal');
             loadCRM();
         });
+        // كود إرسال الطلبية اليدوية
+document.getElementById('manualOrderForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const data = {
+        name: document.getElementById('mName').value,
+        phone: document.getElementById('mPhone').value,
+        wilaya: document.getElementById('mWilaya').value,
+        commune: 'يدوي',
+        product: document.getElementById('mProduct').value,
+        price: document.getElementById('mPrice').value,
+        status: document.getElementById('mStatus').value
+    };
+    
+    await fetch('/api/orders', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+    });
+    
+    document.getElementById('manualOrderForm').reset();
+    toggleModal('manualOrderModal');
+    loadCRM(); // تحديث الجدول أوتوماتيكياً
+});
     </script>
+    <div id="manualOrderModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white p-6 rounded-2xl shadow-xl max-w-sm w-full">
+        <h2 class="text-xl font-bold mb-4">➕ إضافة طلبية يدوية</h2>
+        <form id="manualOrderForm" class="space-y-3">
+            <input type="text" id="mName" placeholder="اسم الزبون" class="w-full p-2 border rounded" required>
+            <input type="text" id="mPhone" placeholder="رقم الهاتف" class="w-full p-2 border rounded" required>
+            <input type="text" id="mWilaya" placeholder="الولاية" class="w-full p-2 border rounded" required>
+            <input type="text" id="mProduct" placeholder="اسم المنتج" class="w-full p-2 border rounded" required>
+            <input type="number" id="mPrice" placeholder="السعر (دج)" class="w-full p-2 border rounded" required>
+            <select id="mStatus" class="w-full p-2 border rounded">
+                <option value="جديد">جديد</option>
+                <option value="مؤكد">مؤكد</option>
+            </select>
+            <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded font-bold">حفظ الطلبية</button>
+            <button type="button" onclick="toggleModal('manualOrderModal')" class="w-full bg-gray-200 py-2 rounded font-bold">إلغاء</button>
+        </form>
+    </div>
+    </div>
 </body>
 </html>
