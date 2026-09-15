@@ -1,1 +1,281 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة التحكم الاحترافية (CRM Pro)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>body { font-family: 'Tajawal', sans-serif; }</style>
+</head>
+<body class="bg-gray-50 min-h-screen">
 
+    <!-- نافذة تسجيل الدخول (Login Modal) -->
+    <div id="loginModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white p-6 rounded-2xl shadow-xl max-w-sm w-full">
+            <h2 class="text-xl font-bold text-center text-gray-800 mb-4">🔐 تسجيل الدخول للـ CRM</h2>
+            <input type="password" id="loginPass" placeholder="أدخل كلمة السر..." class="w-full p-3 border rounded-xl mb-4 text-center font-bold">
+            <button onclick="login()" class="w-full bg-emerald-600 text-white font-bold py-3 rounded-xl hover:bg-emerald-700">دخول</button>
+        </div>
+    </div>
+
+    <!-- المحتوى الرئيسي -->
+    <div id="mainContent" class="hidden max-w-7xl mx-auto p-4 md:p-8">
+        
+        <!-- الهيدر -->
+        <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4 bg-white p-6 rounded-xl shadow-sm">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-800">نظام CRM Pro للتجارة الإلكترونية</h1>
+                <p class="text-sm text-gray-500">إدارة التأكيد، الأرباح الصافية، والواتساب</p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+                <button onclick="toggleModal('settingsModal')" class="bg-gray-800 text-white font-bold px-4 py-2 rounded-lg text-sm">⚙️ إعدادات المتجر</button>
+                <a href="/api/export-csv" class="bg-emerald-600 text-white font-bold px-4 py-2 rounded-lg text-sm">📥 تصدير Excel</a>
+                <button onclick="loadCRM()" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-semibold">🔄 تحديث</button>
+            </div>
+        </div>
+
+        <!-- كروت الإحصائيات والأرباح -->
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+            <div class="bg-white p-4 rounded-xl shadow-sm border-r-4 border-blue-500">
+                <div class="text-xs text-gray-500">إجمالي الطلبيات</div>
+                <div id="statTotal" class="text-xl font-bold text-gray-800">0</div>
+            </div>
+            <div class="bg-white p-4 rounded-xl shadow-sm border-r-4 border-green-500">
+                <div class="text-xs text-gray-500">المؤكدة</div>
+                <div id="statConfirmed" class="text-xl font-bold text-green-600">0</div>
+            </div>
+            <div class="bg-white p-4 rounded-xl shadow-sm border-r-4 border-yellow-500">
+                <div class="text-xs text-gray-500">مؤجل / لا يجيب</div>
+                <div id="statPending" class="text-xl font-bold text-yellow-600">0</div>
+            </div>
+            <div class="bg-white p-4 rounded-xl shadow-sm border-r-4 border-red-500">
+                <div class="text-xs text-gray-500">الملغاة</div>
+                <div id="statCancelled" class="text-xl font-bold text-red-600">0</div>
+            </div>
+            <div class="col-span-2 md:col-span-1 bg-emerald-50 p-4 rounded-xl shadow-sm border-r-4 border-emerald-600">
+                <div class="text-xs text-emerald-800 font-bold">💵 صافي الأرباح المقدرة</div>
+                <div id="statNetProfit" class="text-xl font-bold text-emerald-700">0 د.ج</div>
+            </div>
+        </div>
+
+        <!-- جدول الطلبيات -->
+        <div class="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
+            <div class="overflow-x-auto">
+                <table class="w-full text-right border-collapse">
+                    <thead>
+                        <tr class="bg-gray-100 text-gray-600 text-xs uppercase font-semibold">
+                            <th class="p-4">#</th>
+                            <th class="p-4">الزبون</th>
+                            <th class="p-4">تواصل سريع</th>
+                            <th class="p-4">العنوان</th>
+                            <th class="p-4">الحالة</th>
+                            <th class="p-4">ملاحظات العميل</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ordersTable" class="divide-y divide-gray-100 text-sm"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- نافذة الإعدادات (Settings Modal) -->
+    <div id="settingsModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white p-6 rounded-2xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">⚙️ إعدادات المتجر والأرباح</h2>
+            <form id="settingsForm" class="space-y-3 text-xs">
+                <div>
+                    <label class="font-bold">اسم المنتج</label>
+                    <input type="text" id="setProductName" class="w-full p-2 border rounded">
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="font-bold">سعر البيع (د.ج)</label>
+                        <input type="number" id="setPrice" class="w-full p-2 border rounded">
+                    </div>
+                    <div>
+                        <label class="font-bold">سعر الشراء (د.ج)</label>
+                        <input type="number" id="setBuyPrice" class="w-full p-2 border rounded">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="font-bold">تكلفة التوصيل (د.ج)</label>
+                        <input type="number" id="setShippingCost" class="w-full p-2 border rounded">
+                    </div>
+                    <div>
+                        <label class="font-bold">تكلفة إعلان الطلب (د.ج)</label>
+                        <input type="number" id="setAdCost" class="w-full p-2 border rounded">
+                    </div>
+                </div>
+                <div>
+                    <label class="font-bold">رابط صورة المنتج</label>
+                    <input type="text" id="setImageUrl" class="w-full p-2 border rounded">
+                </div>
+                <div>
+                    <label class="font-bold">كلمة سر الـ CRM</label>
+                    <input type="text" id="setPassword" class="w-full p-2 border rounded">
+                </div>
+                <hr class="my-2">
+                <h3 class="font-bold text-gray-700">🔔 إشعار التلغرام (اختياري):</h3>
+                <div>
+                    <label>Telegram Bot Token</label>
+                    <input type="text" id="setTgToken" placeholder="123456789:ABC..." class="w-full p-2 border rounded">
+                </div>
+                <div>
+                    <label>Telegram Chat ID</label>
+                    <input type="text" id="setTgChatId" placeholder="987654321" class="w-full p-2 border rounded">
+                </div>
+
+                <div class="flex gap-2 pt-3">
+                    <button type="submit" class="flex-1 bg-emerald-600 text-white font-bold py-2 rounded">حفظ التغييرات</button>
+                    <button type="button" onclick="toggleModal('settingsModal')" class="bg-gray-300 text-gray-700 px-4 rounded">إلغاء</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let globalSettings = {};
+
+        async function login() {
+            const pass = document.getElementById('loginPass').value;
+            const res = await fetch('/api/login', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({password: pass})
+            });
+            if(res.ok) {
+                document.getElementById('loginModal').classList.add('hidden');
+                document.getElementById('mainContent').classList.remove('hidden');
+                loadCRM();
+            } else {
+                alert('كلمة السر خاطئة!');
+            }
+        }
+
+        async function loadCRM() {
+            // جلب الإعدادات
+            const setRes = await fetch('/api/settings');
+            globalSettings = await setRes.json();
+            
+            // تعبئة فورمة الإعدادات
+            document.getElementById('setProductName').value = globalSettings.product_name;
+            document.getElementById('setPrice').value = globalSettings.price;
+            document.getElementById('setBuyPrice').value = globalSettings.buy_price;
+            document.getElementById('setShippingCost').value = globalSettings.shipping_cost;
+            document.getElementById('setAdCost').value = globalSettings.ad_cost;
+            document.getElementById('setImageUrl').value = globalSettings.image_url;
+            document.getElementById('setPassword').value = globalSettings.password;
+            document.getElementById('setTgToken').value = globalSettings.telegram_token || '';
+            document.getElementById('setTgChatId').value = globalSettings.telegram_chat_id || '';
+
+            // جلب الطلبات
+            const res = await fetch('/api/orders');
+            const orders = await res.json();
+            const tbody = document.getElementById('ordersTable');
+            tbody.innerHTML = '';
+
+            let confirmed = 0, pending = 0, cancelled = 0;
+
+            orders.forEach(o => {
+                if (o.status === 'مؤكد') confirmed++;
+                else if (o.status === 'ملغى') cancelled++;
+                else pending++;
+
+                // حساب رابط الواتساب
+                let cleanPhone = o.phone.replace(/[^0-9]/g, '');
+                if(cleanPhone.startsWith('0')) cleanPhone = '213' + cleanPhone.substring(1);
+                const waMessage = encodeURIComponent(`السلام عليكم ${o.name}، معاك متجرنا بخصوص طلبك لمنتج ${o.product}. هل تؤكد الطلب للتوصيل؟`);
+
+                tbody.innerHTML += `
+                    <tr class="hover:bg-gray-50">
+                        <td class="p-4 font-bold text-gray-600">#${o.id}</td>
+                        <td class="p-4 font-semibold text-gray-800">${o.name}</td>
+                        <td class="p-4 flex gap-2">
+                            <a href="tel:${o.phone}" class="bg-blue-100 text-blue-700 px-2 py-1 rounded font-bold text-xs">📞 اتصال</a>
+                            <a href="https://wa.me/${cleanPhone}?text=${waMessage}" target="_blank" class="bg-green-100 text-green-700 px-2 py-1 rounded font-bold text-xs flex items-center gap-1">💬 واتساب</a>
+                        </td>
+                        <td class="p-4 text-gray-600">${o.wilaya} - ${o.commune}</td>
+                        <td class="p-4">
+                            <select onchange="updateOrder(${o.id}, this.value, '${o.notes || ''}')" 
+                                class="text-xs font-bold px-2 py-1 rounded-md border 
+                                ${o.status === 'مؤكد' ? 'bg-green-100 text-green-700' : 
+                                  o.status === 'ملغى' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-800'}">
+                                <option value="جديد" ${o.status === 'جديد' ? 'selected' : ''}>جديد</option>
+                                <option value="مؤكد" ${o.status === 'مؤكد' ? 'selected' : ''}>مؤكد ✅</option>
+                                <option value="لا يجيب 1" ${o.status === 'لا يجيب 1' ? 'selected' : ''}>لا يجيب 1</option>
+                                <option value="لا يجيب 2" ${o.status === 'لا يجيب 2' ? 'selected' : ''}>لا يجيب 2</option>
+                                <option value="مؤجل" ${o.status === 'مؤجل' ? 'selected' : ''}>مؤجل ⏳</option>
+                                <option value="ملغى" ${o.status === 'ملغى' ? 'selected' : ''}>ملغى ❌</option>
+                            </select>
+                        </td>
+                        <td class="p-4">
+                            <input type="text" value="${o.notes || ''}" 
+                                onblur="updateOrderNotes(${o.id}, '${o.status}', this.value)"
+                                placeholder="ملاحظة..." class="text-xs p-1 border rounded w-full">
+                        </td>
+                    </tr>
+                `;
+            });
+
+            // الإحصائيات
+            document.getElementById('statTotal').innerText = orders.length;
+            document.getElementById('statConfirmed').innerText = confirmed;
+            document.getElementById('statPending').innerText = pending;
+            document.getElementById('statCancelled').innerText = cancelled;
+
+            // حساب الربح الصافي المقدر = (سعر البيع - سعر الشراء - التوصيل - الإعلان) * عدد المؤكدات
+            const unitProfit = globalSettings.price - globalSettings.buy_price - globalSettings.shipping_cost - globalSettings.ad_cost;
+            const netProfit = confirmed * unitProfit;
+            document.getElementById('statNetProfit').innerText = netProfit.toLocaleString() + ' د.ج';
+        }
+
+        async function updateOrder(id, status, notes) {
+            await fetch(`/api/orders/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status, notes })
+            });
+            loadCRM();
+        }
+
+        async function updateOrderNotes(id, status, notes) {
+            await fetch(`/api/orders/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status, notes })
+            });
+        }
+
+        function toggleModal(id) {
+            document.getElementById(id).classList.toggle('hidden');
+        }
+
+        document.getElementById('settingsForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const data = {
+                product_name: document.getElementById('setProductName').value,
+                price: Number(document.getElementById('setPrice').value),
+                buy_price: Number(document.getElementById('setBuyPrice').value),
+                shipping_cost: Number(document.getElementById('setShippingCost').value),
+                ad_cost: Number(document.getElementById('setAdCost').value),
+                image_url: document.getElementById('setImageUrl').value,
+                password: document.getElementById('setPassword').value,
+                telegram_token: document.getElementById('setTgToken').value,
+                telegram_chat_id: document.getElementById('setTgChatId').value
+            };
+
+            await fetch('/api/settings', {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            });
+
+            alert('تم حفظ الإعدادات بنجاح!');
+            toggleModal('settingsModal');
+            loadCRM();
+        });
+    </script>
+</body>
+  </html>
