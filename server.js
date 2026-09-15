@@ -128,15 +128,26 @@ app.post('/api/login', async (req, res) => {
 });
 
 app.post('/api/orders', async (req, res) => {
-    const { name, phone, wilaya, commune } = req.body;
+    const { name, phone, wilaya, commune, product_name, price, quantity, status } = req.body;
     try {
         const setRes = await pool.query('SELECT * FROM settings WHERE id = 1');
-        const settings = setRes.rows[0];
+        const settings = setRes.rows[0] || {};
         
+        const orderStatus = status || 'جديد';
+        const prodName = product_name || 'منتج';
+        const orderPrice = price || 4500;
+
         const insertRes = await pool.query(
-            `INSERT INTO orders (name, phone, wilaya, commune, product, quantity, price) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
-            [name, phone, wilaya, commune, settings.product_name, 1, settings.price]
+            `INSERT INTO orders (name, phone, wilaya, commune, product, quantity, price, status) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
+            [name, phone, wilaya, commune || 'مكتوب يدوياً', prodName, quantity || 1, orderPrice, orderStatus]
         );
+
+        sendTelegramNotification({ name, phone, wilaya, commune: commune || '', product: prodName, price: orderPrice }, settings);
+        res.json({ success: true, orderId: insertRes.rows[0].id });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
 
         sendTelegramNotification({ name, phone, wilaya, commune, product: settings.product_name, price: settings.price }, settings);
         res.json({ success: true, orderId: insertRes.rows[0].id });
