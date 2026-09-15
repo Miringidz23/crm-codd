@@ -8,42 +8,29 @@
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;600;700;800&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Tajawal', sans-serif; }
-        
-        /* CSS مخصص للطباعة: يخفي كل شيء ويظهر فقط وصل الطرد */
         @media print {
             body * { visibility: hidden; }
             #shippingLabel, #printableArea * { visibility: visible; }
-            #printableArea {
-                position: absolute;
-                left: 0;
-                top: 0;
-                width: 100%;
-                margin: 0;
-                padding: 10px;
-            }
+            #printableArea { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 10px; }
             .no-print { display: none !important; }
         }
     </style>
 </head>
 <body class="bg-gray-50 min-h-screen">
 
-    <!-- نافذة تسجيل الدخول -->
+    <!-- تسجيل الدخول -->
     <div id="loginModal" class="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4 no-print">
-        <div class="bg-white p-6 rounded-2xl shadow-2xl max-w-sm w-full">
-            <div class="text-center mb-4">
-                <span class="text-4xl">🔐</span>
-                <h2 class="text-xl font-bold text-gray-800 mt-2">تسجيل الدخول للـ CRM</h2>
-                <p class="text-xs text-gray-500">أدخل كلمة سر الأدمن أو عامل التأكيد</p>
-            </div>
-            <input type="password" id="loginPass" placeholder="كلمة السر..." class="w-full p-3 border rounded-xl mb-4 text-center font-bold outline-none focus:ring-2 focus:ring-emerald-500">
-            <button onclick="login()" class="w-full bg-emerald-600 text-white font-bold py-3 rounded-xl hover:bg-emerald-700 shadow-lg">دخول</button>
+        <div class="bg-white p-6 rounded-2xl shadow-2xl max-w-sm w-full text-center">
+            <span class="text-4xl">🔐</span>
+            <h2 class="text-xl font-bold text-gray-800 mt-2 text-center">دخول الـ CRM</h2>
+            <input type="password" id="loginPass" placeholder="كلمة السر..." class="w-full p-3 border rounded-xl my-4 text-center font-bold outline-none focus:ring-2 focus:ring-emerald-500">
+            <button onclick="login()" class="w-full bg-emerald-600 text-white font-bold py-3 rounded-xl hover:bg-emerald-700">دخول</button>
         </div>
     </div>
 
     <!-- المحتوى الرئيسي -->
     <div id="mainContent" class="hidden max-w-7xl mx-auto p-4 md:p-8 no-print">
         
-        <!-- الهيدر -->
         <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4 bg-white p-6 rounded-xl shadow-sm border border-gray-100">
             <div>
                 <div class="flex items-center gap-2">
@@ -53,190 +40,129 @@
                 <p class="text-sm text-gray-500">إدارة الطلبيات، طباعة الوصل، والتحليلات</p>
             </div>
             <div class="flex flex-wrap gap-2">
+                <!-- الزر الجديد هنا -->
+                <button onclick="toggleModal('manualOrderModal')" class="bg-blue-600 text-white font-bold px-4 py-2 rounded-lg text-sm">➕ إضافة يدوية</button>
                 <button id="btnSettings" onclick="toggleModal('settingsModal')" class="hidden bg-gray-800 text-white font-bold px-4 py-2 rounded-lg text-sm">⚙️ الإعدادات</button>
-                <a href="/api/export-csv" class="bg-emerald-600 text-white font-bold px-4 py-2 rounded-lg text-sm flex items-center gap-1">📥 تصدير Excel</a>
+                <a href="/api/export-csv" class="bg-emerald-600 text-white font-bold px-4 py-2 rounded-lg text-sm">📥 Excel</a>
                 <button onclick="loadCRM()" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-semibold">🔄 تحديث</button>
             </div>
         </div>
 
-        <!-- الإحصائيات والأرباح -->
-        <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+        <!-- الإحصائيات -->
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6 text-center">
             <div class="bg-white p-4 rounded-xl shadow-sm border-r-4 border-blue-500">
-                <div class="text-xs text-gray-500">إجمالي الطلبيات</div>
-                <div id="statTotal" class="text-xl font-bold text-gray-800">0</div>
+                <div class="text-xs text-gray-500">الطلبيات</div>
+                <div id="statTotal" class="text-xl font-bold">0</div>
             </div>
             <div class="bg-white p-4 rounded-xl shadow-sm border-r-4 border-green-500">
                 <div class="text-xs text-gray-500">المؤكدة</div>
                 <div id="statConfirmed" class="text-xl font-bold text-green-600">0</div>
             </div>
             <div class="bg-white p-4 rounded-xl shadow-sm border-r-4 border-yellow-500">
-                <div class="text-xs text-gray-500">مؤجل / لا يجيب</div>
+                <div class="text-xs text-gray-500">مؤجل</div>
                 <div id="statPending" class="text-xl font-bold text-yellow-600">0</div>
             </div>
             <div class="bg-white p-4 rounded-xl shadow-sm border-r-4 border-red-500">
                 <div class="text-xs text-gray-500">الملغاة</div>
                 <div id="statCancelled" class="text-xl font-bold text-red-600">0</div>
             </div>
-            <div id="profitCard" class="hidden col-span-2 md:col-span-1 bg-emerald-50 p-4 rounded-xl shadow-sm border-r-4 border-emerald-600">
-                <div class="text-xs text-emerald-800 font-bold">💵 الأرباح الصافية المقدرة</div>
+            <div id="profitCard" class="hidden col-span-2 md:col-span-1 bg-emerald-50 p-4 rounded-xl border-r-4 border-emerald-600">
+                <div class="text-xs font-bold text-emerald-800">💵 الأرباح</div>
                 <div id="statNetProfit" class="text-xl font-bold text-emerald-700">0 د.ج</div>
             </div>
         </div>
 
-        <!-- أدوات البحث والفلترة -->
-        <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-6 flex flex-col md:flex-row gap-3">
-            <div class="flex-1">
-                <input type="text" id="searchInput" onkeyup="filterOrders()" placeholder="🔍 ابحث بالاسم أو رقم الهاتف..." class="w-full p-2.5 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-emerald-500">
-            </div>
-            <div class="w-full md:w-48">
-                <select id="statusFilter" onchange="filterOrders()" class="w-full p-2.5 border rounded-lg text-sm font-bold bg-gray-50">
-                    <option value="ALL">جميع الحالات</option>
-                    <option value="جديد">جديد</option>
-                    <option value="مؤكد">مؤكد ✅</option>
-                    <option value="لا يجيب 1">لا يجيب 1</option>
-                    <option value="لا يجيب 2">لا يجيب 2</option>
-                    <option value="مؤجل">مؤجل ⏳</option>
-                    <option value="ملغى">ملغى ❌</option>
-                </select>
-            </div>
+        <!-- البحث -->
+        <div class="bg-white p-4 rounded-xl shadow-sm mb-6 flex gap-3">
+            <input type="text" id="searchInput" onkeyup="filterOrders()" placeholder="🔍 ابحث بالاسم أو الهاتف..." class="w-full p-2.5 border rounded-lg text-sm outline-none">
+            <select id="statusFilter" onchange="filterOrders()" class="w-48 p-2.5 border rounded-lg text-sm font-bold bg-gray-50">
+                <option value="ALL">جميع الحالات</option>
+                <option value="جديد">جديد</option>
+                <option value="مؤكد">مؤكد ✅</option>
+                <option value="ملغى">ملغى ❌</option>
+            </select>
         </div>
 
-        <!-- جدول الطلبيات -->
-        <div class="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
-            <div class="overflow-x-auto">
-                <table class="w-full text-right border-collapse">
-                    <thead>
-                        <tr class="bg-gray-100 text-gray-600 text-xs uppercase font-semibold">
-                            <th class="p-4">#</th>
-                            <th class="p-4">الزبون</th>
-                            <th class="p-4">تواصل سريع</th>
-                            <th class="p-4">العنوان</th>
-                            <th class="p-4">الحالة</th>
-                            <th class="p-4">طباعة الوصل</th>
-                            <th class="p-4">ملاحظات العميل</th>
-                        </tr>
-                    </thead>
-                    <tbody id="ordersTable" class="divide-y divide-gray-100 text-sm"></tbody>
-                </table>
-            </div>
+        <!-- الجدول -->
+        <div class="bg-white rounded-xl shadow-sm overflow-x-auto">
+            <table class="w-full text-right border-collapse">
+                <thead class="bg-gray-100 text-xs">
+                    <tr>
+                        <th class="p-4">#</th>
+                        <th class="p-4">الزبون</th>
+                        <th class="p-4">تواصل</th>
+                        <th class="p-4">العنوان</th>
+                        <th class="p-4">الحالة</th>
+                        <th class="p-4">الوصل</th>
+                    </tr>
+                </thead>
+                <tbody id="ordersTable" class="divide-y text-sm"></tbody>
+            </table>
         </div>
     </div>
 
-    <!-- 🏷️ نافذة وصل التوصيل للطباعة (Shipping Label Modal) -->
+    <!-- نافذة الإضافة اليدوية -->
+    <div id="manualOrderModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white p-6 rounded-2xl shadow-xl max-w-sm w-full">
+            <h2 class="text-xl font-bold mb-4">➕ إضافة طلبية يدوية</h2>
+            <form id="manualOrderForm" class="space-y-3">
+                <input type="text" id="mName" placeholder="اسم الزبون" class="w-full p-2 border rounded" required>
+                <input type="text" id="mPhone" placeholder="رقم الهاتف" class="w-full p-2 border rounded" required>
+                <input type="text" id="mWilaya" placeholder="الولاية" class="w-full p-2 border rounded" required>
+                <input type="text" id="mProduct" placeholder="اسم المنتج" class="w-full p-2 border rounded" required>
+                <input type="number" id="mPrice" placeholder="السعر (دج)" class="w-full p-2 border rounded" required>
+                <select id="mStatus" class="w-full p-2 border rounded">
+                    <option value="جديد">جديد</option>
+                    <option value="مؤكد">مؤكد</option>
+                </select>
+                <div class="flex gap-2">
+                    <button type="submit" class="flex-1 bg-blue-600 text-white py-2 rounded font-bold">حفظ</button>
+                    <button type="button" onclick="toggleModal('manualOrderModal')" class="flex-1 bg-gray-200 py-2 rounded">إلغاء</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- نافذة وصل التوصيل -->
     <div id="labelModal" class="hidden fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center p-4">
-        <div class="bg-white p-6 rounded-2xl shadow-2xl max-w-lg w-full">
-            
-            <div id="printableArea" class="border-4 border-black p-5 bg-white text-black font-sans rounded-none">
-                <!-- الهيدر -->
-                <div class="flex justify-between items-center border-b-2 border-black pb-3 mb-3">
-                    <div>
-                        <h2 id="lblStoreName" class="font-black text-xl tracking-wide uppercase">اسم المتجر</h2>
-                        <p class="text-xs font-bold text-gray-700">وصل التوصيل - الدفع عند الاستلام (COD)</p>
-                    </div>
-                    <div class="text-left">
-                        <span id="lblOrderId" class="font-black text-lg border-2 border-black px-2 py-1">#000</span>
-                    </div>
+        <div class="bg-white p-6 rounded-2xl max-w-lg w-full">
+            <div id="printableArea" class="border-4 border-black p-5 bg-white text-black rounded-none">
+                <div class="flex justify-between border-b-2 border-black pb-2 mb-2">
+                    <h2 id="lblStoreName" class="font-black text-xl">STORE</h2>
+                    <span id="lblOrderId" class="font-black border-2 border-black px-2">#000</span>
                 </div>
-
-                <!-- معلومات المرسل إليه (الزبون) -->
-                <div class="border-2 border-black p-3 mb-3 bg-gray-50">
-                    <div class="text-[10px] font-bold text-gray-500 uppercase border-b mb-1">المرسل إليه (الزبون / Destinataire):</div>
-                    <div id="lblCustomerName" class="font-black text-lg text-black">محمد بن علي</div>
-                    <div id="lblCustomerPhone" class="font-black text-xl text-black my-1">📞 0550123456</div>
-                    <div id="lblCustomerAddress" class="font-bold text-md text-gray-900">الجزائر - باب الزوار</div>
+                <div class="border-2 border-black p-2 mb-2">
+                    <div id="lblCustomerName" class="font-black text-lg">---</div>
+                    <div id="lblCustomerPhone" class="font-black text-xl my-1">---</div>
+                    <div id="lblCustomerAddress" class="font-bold text-md text-gray-800">---</div>
                 </div>
-
-                <!-- تفاصيل المنتج -->
-                <div class="border-2 border-black p-3 mb-3">
-                    <div class="text-[10px] font-bold text-gray-500 uppercase border-b mb-1">محتوى الطرد (Contenu):</div>
-                    <div class="flex justify-between items-center font-bold text-sm">
-                        <span id="lblProduct">Smart Watch Series 9</span>
-                        <span id="lblQty" class="border border-black px-2">الكمية: 1</span>
-                    </div>
-                </div>
-
-                <!-- المبلغ المطلوب تحصيله (بخط ضخم) -->
-                <div class="border-4 border-black p-3 text-center bg-black text-white">
-                    <div class="text-xs font-bold uppercase">المبلغ المطلوب تحصيله من الزبون:</div>
-                    <div id="lblTotalPrice" class="text-3xl font-black tracking-wider my-1">5,100 د.ج</div>
-                    <div class="text-[10px] font-bold text-gray-300">⚠️ يرجى عدم تسليم الطرد إلا بعد استلام المبلغ كاملاً</div>
-                </div>
-
-                <!-- الباركود الافتراضي للتجميل -->
-                <div class="mt-3 text-center">
-                    <div class="font-mono text-xs tracking-widest font-bold">||||| | |||||||| ||| ||||||| ||||</div>
-                    <div class="text-[9px] text-gray-500">COD-EXPRESS-DELIVERY-LABEL</div>
+                <div class="border-4 border-black p-2 text-center bg-black text-white">
+                    <div class="text-xs font-bold uppercase">المبلغ المطلوب تحصيله:</div>
+                    <div id="lblTotalPrice" class="text-3xl font-black my-1">0 د.ج</div>
                 </div>
             </div>
-
-            <div class="flex gap-2 mt-4 no-print">
-                <button onclick="window.print()" class="flex-1 bg-emerald-600 text-white font-black py-3 rounded-xl hover:bg-emerald-700 shadow-lg text-sm flex items-center justify-center gap-1">
-                    🖨️ إرسال للطابعة الآن
-                </button>
-                <button onclick="toggleModal('labelModal')" class="bg-gray-300 text-gray-700 px-5 rounded-xl font-bold text-sm">إلغاء</button>
-            </div>
+            <button onclick="window.print()" class="w-full bg-emerald-600 text-white font-black py-3 mt-4 rounded-xl">🖨️ طباعة الآن</button>
+            <button onclick="toggleModal('labelModal')" class="w-full bg-gray-200 py-2 mt-2 rounded-xl text-sm font-bold">إغاء</button>
         </div>
     </div>
 
     <!-- نافذة الإعدادات -->
-    <div id="settingsModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 no-print">
-        <div class="bg-white p-6 rounded-2xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
-            <h2 class="text-xl font-bold text-gray-800 mb-4">⚙️ إعدادات المتجر والحسابات</h2>
-            <form id="settingsForm" class="space-y-3 text-xs">
-                <div>
-                    <label class="font-bold">اسم المنتج</label>
-                    <input type="text" id="setProductName" class="w-full p-2 border rounded">
+    <div id="settingsModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white p-6 rounded-2xl max-w-md w-full max-h-[80vh] overflow-auto">
+            <h2 class="text-xl font-bold mb-4">⚙️ إعدادات المتجر</h2>
+            <form id="settingsForm" class="space-y-2 text-xs">
+                <input type="text" id="setProductName" placeholder="اسم المنتج" class="w-full p-2 border rounded">
+                <div class="grid grid-cols-2 gap-2">
+                    <input type="number" id="setPrice" placeholder="سعر البيع" class="w-full p-2 border rounded">
+                    <input type="number" id="setBuyPrice" placeholder="سعر الشراء" class="w-full p-2 border rounded">
                 </div>
                 <div class="grid grid-cols-2 gap-2">
-                    <div>
-                        <label class="font-bold">سعر البيع (د.ج)</label>
-                        <input type="number" id="setPrice" class="w-full p-2 border rounded">
-                    </div>
-                    <div>
-                        <label class="font-bold">سعر الشراء (د.ج)</label>
-                        <input type="number" id="setBuyPrice" class="w-full p-2 border rounded">
-                    </div>
+                    <input type="number" id="setShippingCost" placeholder="التوصيل" class="w-full p-2 border rounded">
+                    <input type="number" id="setAdCost" placeholder="الإعلان" class="w-full p-2 border rounded">
                 </div>
-                <div class="grid grid-cols-2 gap-2">
-                    <div>
-                        <label class="font-bold">تكلفة التوصيل (د.ج)</label>
-                        <input type="number" id="setShippingCost" class="w-full p-2 border rounded">
-                    </div>
-                    <div>
-                        <label class="font-bold">تكلفة الإعلان للطلب (د.ج)</label>
-                        <input type="number" id="setAdCost" class="w-full p-2 border rounded">
-                    </div>
-                </div>
-                <div>
-                    <label class="font-bold">رابط صورة المنتج</label>
-                    <input type="text" id="setImageUrl" class="w-full p-2 border rounded">
-                </div>
-                <hr class="my-2">
-                <div class="grid grid-cols-2 gap-2">
-                    <div>
-                        <label class="font-bold text-red-600">كلمة سر الأدمن</label>
-                        <input type="text" id="setAdminPass" class="w-full p-2 border rounded">
-                    </div>
-                    <div>
-                        <label class="font-bold text-blue-600">كلمة سر العامل (Agent)</label>
-                        <input type="text" id="setAgentPass" class="w-full p-2 border rounded">
-                    </div>
-                </div>
-                <hr class="my-2">
-                <h3 class="font-bold text-gray-700">🔔 إشعار التلغرام:</h3>
-                <div>
-                    <label>Bot Token</label>
-                    <input type="text" id="setTgToken" class="w-full p-2 border rounded">
-                </div>
-                <div>
-                    <label>Chat ID</label>
-                    <input type="text" id="setTgChatId" class="w-full p-2 border rounded">
-                </div>
-
-                <div class="flex gap-2 pt-3">
-                    <button type="submit" class="flex-1 bg-emerald-600 text-white font-bold py-2 rounded">حفظ التغييرات</button>
-                    <button type="button" onclick="toggleModal('settingsModal')" class="bg-gray-300 text-gray-700 px-4 rounded">إلغاء</button>
-                </div>
+                <input type="text" id="setAdminPass" placeholder="كلمة سر الأدمن" class="w-full p-2 border rounded">
+                <input type="text" id="setAgentPass" placeholder="كلمة سر العامل" class="w-full p-2 border rounded">
+                <button type="submit" class="w-full bg-emerald-600 text-white font-bold py-2 rounded">حفظ التغييرات</button>
             </form>
         </div>
     </div>
@@ -254,42 +180,22 @@
                 body: JSON.stringify({password: pass})
             });
             const data = await res.json();
-            if(res.ok && data.success) {
+            if(res.ok) {
                 currentRole = data.role;
                 document.getElementById('loginModal').classList.add('hidden');
                 document.getElementById('mainContent').classList.remove('hidden');
-
                 if(currentRole === 'admin') {
-                    document.getElementById('roleBadge').innerText = 'أدمن (مول البيزنس)';
-                    document.getElementById('roleBadge').className = 'text-xs font-bold px-2 py-1 rounded-full bg-purple-100 text-purple-800';
                     document.getElementById('profitCard').classList.remove('hidden');
                     document.getElementById('btnSettings').classList.remove('hidden');
-                } else {
-                    document.getElementById('roleBadge').innerText = 'عامل تأكيد (Agent)';
-                    document.getElementById('roleBadge').className = 'text-xs font-bold px-2 py-1 rounded-full bg-blue-100 text-blue-800';
+                    document.getElementById('roleBadge').innerText = 'أدمن (مول البيزنس)';
                 }
-
                 loadCRM();
-            } else {
-                alert('كلمة السر خاطئة!');
-            }
+            } else { alert('كلمة السر خاطئة!'); }
         }
 
         async function loadCRM() {
             const setRes = await fetch('/api/settings');
             globalSettings = await setRes.json();
-            
-            document.getElementById('setProductName').value = globalSettings.product_name;
-            document.getElementById('setPrice').value = globalSettings.price;
-            document.getElementById('setBuyPrice').value = globalSettings.buy_price;
-            document.getElementById('setShippingCost').value = globalSettings.shipping_cost;
-            document.getElementById('setAdCost').value = globalSettings.ad_cost;
-            document.getElementById('setImageUrl').value = globalSettings.image_url;
-            document.getElementById('setAdminPass').value = globalSettings.admin_pass || 'admin123';
-            document.getElementById('setAgentPass').value = globalSettings.agent_pass || 'agent123';
-            document.getElementById('setTgToken').value = globalSettings.telegram_token || '';
-            document.getElementById('setTgChatId').value = globalSettings.telegram_chat_id || '';
-
             const res = await fetch('/api/orders');
             allOrders = await res.json();
             renderTable(allOrders);
@@ -298,7 +204,6 @@
         function renderTable(orders) {
             const tbody = document.getElementById('ordersTable');
             tbody.innerHTML = '';
-
             let confirmed = 0, pending = 0, cancelled = 0;
 
             orders.forEach(o => {
@@ -308,171 +213,68 @@
 
                 let cleanPhone = o.phone.replace(/[^0-9]/g, '');
                 if(cleanPhone.startsWith('0')) cleanPhone = '213' + cleanPhone.substring(1);
-                const waMessage = encodeURIComponent(`السلام عليكم ${o.name}، معاك متجرنا بخصوص طلبك لمنتج ${o.product}. هل تؤكد الطلب للتوصيل؟`);
-
+                
                 tbody.innerHTML += `
-                    <tr class="hover:bg-gray-50">
-                        <td class="p-4 font-bold text-gray-600">#${o.id}</td>
-                        <td class="p-4 font-semibold text-gray-800">${o.name}</td>
-                        <td class="p-4 flex gap-2">
-                            <a href="tel:${o.phone}" class="bg-blue-100 text-blue-700 px-2.5 py-1 rounded font-bold text-xs">📞 اتصال</a>
-                            <a href="https://wa.me/${cleanPhone}?text=${waMessage}" target="_blank" class="bg-green-100 text-green-700 px-2.5 py-1 rounded font-bold text-xs flex items-center gap-1">💬 واتساب</a>
+                    <tr>
+                        <td class="p-4 font-bold">#${o.id}</td>
+                        <td class="p-4">${o.name}</td>
+                        <td class="p-4 flex gap-1">
+                            <a href="tel:${o.phone}" class="bg-blue-100 text-blue-700 p-1 rounded text-xs">📞</a>
+                            <a href="https://wa.me/${cleanPhone}" class="bg-green-100 text-green-700 p-1 rounded text-xs">💬</a>
                         </td>
-                        <td class="p-4 text-gray-600">${o.wilaya} - ${o.commune}</td>
+                        <td class="p-4 text-xs">${o.wilaya}</td>
                         <td class="p-4">
-                            <select onchange="updateOrder(${o.id}, this.value, '${o.notes || ''}')" 
-                                class="text-xs font-bold px-2 py-1 rounded-md border 
-                                ${o.status === 'مؤكد' ? 'bg-green-100 text-green-700 border-green-300' : 
-                                  o.status === 'ملغى' ? 'bg-red-100 text-red-700 border-red-300' : 'bg-yellow-100 text-yellow-800 border-yellow-300'}">
+                            <select onchange="updateOrder(${o.id}, this.value, '${o.notes || ''}')" class="text-xs p-1 rounded border">
                                 <option value="جديد" ${o.status === 'جديد' ? 'selected' : ''}>جديد</option>
                                 <option value="مؤكد" ${o.status === 'مؤكد' ? 'selected' : ''}>مؤكد ✅</option>
-                                <option value="لا يجيب 1" ${o.status === 'لا يجيب 1' ? 'selected' : ''}>لا يجيب 1</option>
-                                <option value="لا يجيب 2" ${o.status === 'لا يجيب 2' ? 'selected' : ''}>لا يجيب 2</option>
-                                <option value="مؤجل" ${o.status === 'مؤجل' ? 'selected' : ''}>مؤجل ⏳</option>
                                 <option value="ملغى" ${o.status === 'ملغى' ? 'selected' : ''}>ملغى ❌</option>
                             </select>
                         </td>
-                        <td class="p-4">
-                            <button onclick="openShippingLabel(${o.id})" class="bg-gray-800 hover:bg-black text-white px-2.5 py-1 rounded font-bold text-xs flex items-center gap-1">
-                                🖨️ وصل الطرد
-                            </button>
-                        </td>
-                        <td class="p-4">
-                            <input type="text" value="${o.notes || ''}" 
-                                onblur="updateOrderNotes(${o.id}, '${o.status}', this.value)"
-                                placeholder="ملاحظة..." class="text-xs p-1 border rounded w-full">
-                        </td>
+                        <td class="p-4"><button onclick="openShippingLabel(${o.id})" class="text-xs font-bold">🖨️ وصل</button></td>
                     </tr>
                 `;
             });
-
             document.getElementById('statTotal').innerText = allOrders.length;
             document.getElementById('statConfirmed').innerText = confirmed;
-            document.getElementById('statPending').innerText = pending;
-            document.getElementById('statCancelled').innerText = cancelled;
-
-            const unitProfit = globalSettings.price - globalSettings.buy_price - globalSettings.shipping_cost - globalSettings.ad_cost;
-            const netProfit = confirmed * unitProfit;
-            document.getElementById('statNetProfit').innerText = netProfit.toLocaleString() + ' د.ج';
+            document.getElementById('statNetProfit').innerText = (confirmed * (globalSettings.price - globalSettings.buy_price - 1000)).toLocaleString() + ' دج';
         }
 
-        // دالة تعبئة الوصل ببيانات الطلبية للطباعة
         function openShippingLabel(id) {
-            const order = allOrders.find(o => o.id === id);
-            if(!order) return;
-
-            document.getElementById('lblStoreName').innerText = globalSettings.product_name + ' STORE';
-            document.getElementById('lblOrderId').innerText = '#' + order.id;
-            document.getElementById('lblCustomerName').innerText = order.name;
-            document.getElementById('lblCustomerPhone').innerText = '📞 ' + order.phone;
-            document.getElementById('lblCustomerAddress').innerText = order.wilaya + ' - ' + order.commune;
-            document.getElementById('lblProduct').innerText = order.product;
-            document.getElementById('lblQty').innerText = 'الكمية: ' + (order.quantity || 1);
-            document.getElementById('lblTotalPrice').innerText = Number(order.price).toLocaleString() + ' د.ج';
-
+            const o = allOrders.find(x => x.id === id);
+            document.getElementById('lblCustomerName').innerText = o.name;
+            document.getElementById('lblCustomerPhone').innerText = o.phone;
+            document.getElementById('lblCustomerAddress').innerText = o.wilaya;
+            document.getElementById('lblTotalPrice').innerText = Number(o.price).toLocaleString() + ' دج';
             toggleModal('labelModal');
         }
 
-        function filterOrders() {
-            const query = document.getElementById('searchInput').value.toLowerCase();
-            const status = document.getElementById('statusFilter').value;
-
-            const filtered = allOrders.filter(o => {
-                const matchesSearch = o.name.toLowerCase().includes(query) || o.phone.includes(query);
-                const matchesStatus = (status === 'ALL') || (o.status === status);
-                return matchesSearch && matchesStatus;
-            });
-
-            renderTable(filtered);
-        }
-
         async function updateOrder(id, status, notes) {
-            await fetch(`/api/orders/${id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status, notes })
-            });
+            await fetch(`/api/orders/${id}`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({status, notes}) });
             loadCRM();
         }
 
-        async function updateOrderNotes(id, status, notes) {
-            await fetch(`/api/orders/${id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status, notes })
-            });
-        }
-
-        function toggleModal(id) {
-            document.getElementById(id).classList.toggle('hidden');
-        }
-
-        document.getElementById('settingsForm').addEventListener('submit', async (e) => {
+        document.getElementById('manualOrderForm').onsubmit = async (e) => {
             e.preventDefault();
             const data = {
-                product_name: document.getElementById('setProductName').value,
-                price: Number(document.getElementById('setPrice').value),
-                buy_price: Number(document.getElementById('setBuyPrice').value),
-                shipping_cost: Number(document.getElementById('setShippingCost').value),
-                ad_cost: Number(document.getElementById('setAdCost').value),
-                image_url: document.getElementById('setImageUrl').value,
-                admin_pass: document.getElementById('setAdminPass').value,
-                agent_pass: document.getElementById('setAgentPass').value,
-                telegram_token: document.getElementById('setTgToken').value,
-                telegram_chat_id: document.getElementById('setTgChatId').value
+                name: document.getElementById('mName').value,
+                phone: document.getElementById('mPhone').value,
+                wilaya: document.getElementById('mWilaya').value,
+                commune: 'يدوي',
+                product: document.getElementById('mProduct').value,
+                price: document.getElementById('mPrice').value,
+                status: document.getElementById('mStatus').value
             };
-
-            await fetch('/api/settings', {
-                method: 'PUT',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(data)
-            });
-
-            alert('تم حفظ الإعدادات بنجاح!');
-            toggleModal('settingsModal');
+            await fetch('/api/orders', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
+            toggleModal('manualOrderModal');
             loadCRM();
-        });
-        // كود إرسال الطلبية اليدوية
-document.getElementById('manualOrderForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const data = {
-        name: document.getElementById('mName').value,
-        phone: document.getElementById('mPhone').value,
-        wilaya: document.getElementById('mWilaya').value,
-        commune: 'يدوي',
-        product: document.getElementById('mProduct').value,
-        price: document.getElementById('mPrice').value,
-        status: document.getElementById('mStatus').value
-    };
-    
-    await fetch('/api/orders', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify(data)
-    });
-    
-    document.getElementById('manualOrderForm').reset();
-    toggleModal('manualOrderModal');
-    loadCRM(); // تحديث الجدول أوتوماتيكياً
-});
+        };
+
+        function toggleModal(id) { document.getElementById(id).classList.toggle('hidden'); }
+        function filterOrders() {
+            const q = document.getElementById('searchInput').value.toLowerCase();
+            const s = document.getElementById('statusFilter').value;
+            renderTable(allOrders.filter(o => (o.name.toLowerCase().includes(q) || o.phone.includes(q)) && (s === 'ALL' || o.status === s)));
+        }
     </script>
-    <div id="manualOrderModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-    <div class="bg-white p-6 rounded-2xl shadow-xl max-w-sm w-full">
-        <h2 class="text-xl font-bold mb-4">➕ إضافة طلبية يدوية</h2>
-        <form id="manualOrderForm" class="space-y-3">
-            <input type="text" id="mName" placeholder="اسم الزبون" class="w-full p-2 border rounded" required>
-            <input type="text" id="mPhone" placeholder="رقم الهاتف" class="w-full p-2 border rounded" required>
-            <input type="text" id="mWilaya" placeholder="الولاية" class="w-full p-2 border rounded" required>
-            <input type="text" id="mProduct" placeholder="اسم المنتج" class="w-full p-2 border rounded" required>
-            <input type="number" id="mPrice" placeholder="السعر (دج)" class="w-full p-2 border rounded" required>
-            <select id="mStatus" class="w-full p-2 border rounded">
-                <option value="جديد">جديد</option>
-                <option value="مؤكد">مؤكد</option>
-            </select>
-            <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded font-bold">حفظ الطلبية</button>
-            <button type="button" onclick="toggleModal('manualOrderModal')" class="w-full bg-gray-200 py-2 rounded font-bold">إلغاء</button>
-        </form>
-    </div>
-    </div>
 </body>
-</html>
+    </html>
