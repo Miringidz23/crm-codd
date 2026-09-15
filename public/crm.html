@@ -7,6 +7,8 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <!-- مكتبة توليد الباركود للوصل -->
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
   <style>
     * { font-family: 'Tajawal', sans-serif; }
     body { background: #0f172a; color: #e2e8f0; }
@@ -1201,6 +1203,133 @@ function logout() {
   window.location.href = '/';
 }
 </script>
+  // ============ PRINT BORDEREAU FUNCTIONS ============
 
+// طباعة وصل فردي
+async function printSingleBordereau(orderId) {
+  try {
+    const data = await apiCall(`/api/orders?search=`); // جلب الطلبيات
+    const order = data.orders.find(o => o.id === orderId);
+    if (!order) return showToast('الطلبية غير موجودة', 'error');
+
+    generateBordereauHTML([order]);
+    setTimeout(() => {
+      window.print();
+    }, 300);
+  } catch (err) {
+    showToast('خطأ في تحضير الوصل للطباعة', 'error');
+  }
+}
+
+// طباعة عدة وصليات محددة (Bulk Print)
+async function printSelectedBordereaux() {
+  const selectedIds = Array.from(document.querySelectorAll('.order-check:checked')).map(cb => parseInt(cb.value));
+  if (selectedIds.length === 0) {
+    return showToast('يرجى تحديد طلبية واحدة على الأقل للطباعة', 'warning');
+  }
+
+  try {
+    const data = await apiCall(`/api/orders?limit=100`);
+    const selectedOrders = data.orders.filter(o => selectedIds.includes(o.id));
+
+    generateBordereauHTML(selectedOrders);
+    setTimeout(() => {
+      window.print();
+    }, 500);
+  } catch (err) {
+    showToast('خطأ في تحضير الوصليات', 'error');
+  }
+}
+
+// توليد هيكل الوصل (HTML)
+function generateBordereauHTML(ordersList) {
+  const printContainer = document.getElementById('printArea');
+  
+  let htmlContent = ordersList.map((o, index) => {
+    const itemsList = (o.items || []).map(i => `<li>- ${i.product_name} <strong>(×${i.quantity})</strong></li>`).join('');
+    
+    return `
+      <div class="page-break border-4 border-black p-4 m-2 text-black bg-white" style="width: 100mm; min-height: 145mm; font-family: 'Tajawal', sans-serif; dir: rtl;">
+        <!-- Header -->
+        <div class="flex justify-between items-center border-b-2 border-black pb-2 mb-2">
+          <div>
+            <h2 class="text-xl font-black uppercase tracking-wider">متجر التجارة الإلكترونية</h2>
+            <p class="text-xs font-bold">وصل تسليم - COD Algeria</p>
+          </div>
+          <div class="text-left">
+            <span class="text-xs font-bold block">التاريخ: ${new Date(o.created_at).toLocaleDateString('ar-DZ')}</span>
+            <span class="text-xs font-bold block">نوع التوصيل: ${o.delivery_type === 'home' ? 'منزل 🏠' : 'مكتب 🏢'}</span>
+          </div>
+        </div>
+
+        <!-- Barcode Area -->
+        <div class="text-center my-2 bg-gray-100 p-1 border border-black rounded">
+          <svg id="barcode-${o.id}" class="w-full h-12"></svg>
+        </div>
+
+        <!-- Customer Info -->
+        <div class="border-2 border-black p-2 mb-2 rounded bg-gray-50">
+          <p class="text-xs text-gray-600 font-bold">معلومات الزبون:</p>
+          <p class="text-base font-black">${o.customer_name}</p>
+          <p class="text-sm font-black dir-ltr text-right">📱 ${o.customer_phone} ${o.customer_phone2 ? ' / ' + o.customer_phone2 : ''}</p>
+          <p class="text-sm font-bold mt-1">📍 ${o.wilaya_code} - ${o.wilaya_name} | ${o.commune || ''}</p>
+          <p class="text-xs font-medium">${o.address || ''}</p>
+        </div>
+
+        <!-- Order Items -->
+        <div class="border border-black p-2 mb-2 rounded min-h-[35mm]">
+          <p class="text-xs text-gray-600 font-bold border-b border-gray-300 pb-1 mb-1">محتوى الطرد:</p>
+          <ul class="text-xs space-y-1 font-bold">
+            ${itemsList}
+          </ul>
+        </div>
+
+        <!-- Total Price -->
+        <div class="border-2 border-black p-2 text-center rounded bg-black text-white">
+          <span class="text-xs block font-bold">المبلغ المطلوب تحصيله (COD):</span>
+          <span class="text-2xl font-black">${formatMoney(o.total_amount)}</span>
+        </div>
+
+        <!-- Footer -->
+        <div class="mt-2 text-center text-[9px] font-bold text-gray-700">
+          شكراً لتسوقكم معنا! يرجى التأكد من الطرد قبل الدفع.
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  printContainer.innerHTML = htmlContent;
+
+  // توليد الباركود لكل وصل
+  ordersList.forEach(o => {
+    JsBarcode(`#barcode-${o.id}`, o.tracking_id, {
+      format: "CODE128",
+      width: 2,
+      height: 40,
+      displayValue: true,
+      fontSize: 12,
+      margin: 2
+    });
+  });
+}
+<!-- =================== PRINT BORDEREAU STYLES & CONTAINER =================== -->
+<style>
+  @media print {
+    body * { visibility: hidden !important; }
+    #printArea, #printArea * { visibility: visible !important; }
+    #printArea {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      background: white !important;
+      color: black !important;
+    }
+    .page-break { page-break-after: always; }
+  }
+</style>
+
+<!-- منطقة الطباعة المخفية -->
+<div id="printArea" class="hidden"></div>
 </body>
             </html>
