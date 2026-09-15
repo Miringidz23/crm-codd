@@ -1,1 +1,95 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>متجرنا - ساعة ذكية فائقة الأداء</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap" rel="stylesheet">
+    <style>body { font-family: 'Tajawal', sans-serif; }</style>
+</head>
+<body class="bg-gray-100 min-h-screen">
 
+    <div class="max-w-md mx-auto bg-white min-h-screen shadow-lg">
+        <!-- صورة المنتج -->
+        <img src="https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&q=80" alt="Product" class="w-full h-72 object-cover">
+        
+        <div class="p-5">
+            <h1 class="text-2xl font-bold text-gray-800">Smart Watch Series 9 - ساعة ذكية أصلية</h1>
+            <div class="flex items-center space-x-2 space-x-reverse mt-2">
+                <span class="text-2xl font-bold text-emerald-600">4,500 د.ج</span>
+                <span class="text-sm line-through text-gray-400">6,500 د.ج</span>
+                <span class="bg-red-100 text-red-600 text-xs px-2 py-1 rounded-full font-bold">تخفيض 30%</span>
+            </div>
+
+            <!-- استمارة الطلب السريع -->
+            <div class="mt-6 border-t pt-4">
+                <h2 class="text-lg font-bold text-gray-700 mb-3">للطلب يرجى إدخال معلوماتك:</h2>
+                
+                <form id="orderForm" class="space-y-3">
+                    <div>
+                        <label class="block text-sm text-gray-600 mb-1">الاسم الكامل *</label>
+                        <input type="text" id="name" required class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="محمد بن علي">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-600 mb-1">رقم الهاتف *</label>
+                        <input type="tel" id="phone" required class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="0550123456">
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-sm text-gray-600 mb-1">الولاية *</label>
+                            <input type="text" id="wilaya" required class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="الجزائر">
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-600 mb-1">البلدية *</label>
+                            <input type="text" id="commune" required class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="باب الزوار">
+                        </div>
+                    </div>
+
+                    <button type="submit" id="submitBtn" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 rounded-xl shadow-lg mt-4 transition duration-200">
+                        اضغط هنا لتأكيد الطلب 🚚
+                    </button>
+                </form>
+
+                <div id="successMsg" class="hidden mt-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded-lg text-center font-bold">
+                    تم استلام طلبك بنجاح! سنتصل بك قريباً لتأكيد التوصيل.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('orderForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.innerText = 'جاري إرسال الطلب...';
+
+            const orderData = {
+                name: document.getElementById('name').value,
+                phone: document.getElementById('phone').value,
+                wilaya: document.getElementById('wilaya').value,
+                commune: document.getElementById('commune').value,
+                product: 'Smart Watch Series 9',
+                quantity: 1,
+                price: 4500
+            };
+
+            try {
+                const res = await fetch('/api/orders', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(orderData)
+                });
+                if (res.ok) {
+                    document.getElementById('orderForm').reset();
+                    document.getElementById('orderForm').classList.add('hidden');
+                    document.getElementById('successMsg').classList.remove('hidden');
+                }
+            } catch (err) {
+                alert('حدث خطأ أثناء إرسال الطلب!');
+            }
+        });
+    </script>
+</body>
+</html>
