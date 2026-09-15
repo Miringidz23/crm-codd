@@ -5,13 +5,30 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>لوحة التحكم الاحترافية (CRM Enterprise)</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;600;700&display=swap" rel="stylesheet">
-    <style>body { font-family: 'Tajawal', sans-serif; }</style>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Tajawal', sans-serif; }
+        
+        /* CSS مخصص للطباعة: يخفي كل شيء ويظهر فقط وصل الطرد */
+        @media print {
+            body * { visibility: hidden; }
+            #shippingLabel, #printableArea * { visibility: visible; }
+            #printableArea {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                margin: 0;
+                padding: 10px;
+            }
+            .no-print { display: none !important; }
+        }
+    </style>
 </head>
 <body class="bg-gray-50 min-h-screen">
 
     <!-- نافذة تسجيل الدخول -->
-    <div id="loginModal" class="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4">
+    <div id="loginModal" class="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4 no-print">
         <div class="bg-white p-6 rounded-2xl shadow-2xl max-w-sm w-full">
             <div class="text-center mb-4">
                 <span class="text-4xl">🔐</span>
@@ -24,7 +41,7 @@
     </div>
 
     <!-- المحتوى الرئيسي -->
-    <div id="mainContent" class="hidden max-w-7xl mx-auto p-4 md:p-8">
+    <div id="mainContent" class="hidden max-w-7xl mx-auto p-4 md:p-8 no-print">
         
         <!-- الهيدر -->
         <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4 bg-white p-6 rounded-xl shadow-sm border border-gray-100">
@@ -33,7 +50,7 @@
                     <h1 class="text-2xl font-bold text-gray-800">نظام إدارة المبيعات والتأكيد</h1>
                     <span id="roleBadge" class="text-xs font-bold px-2 py-1 rounded-full bg-blue-100 text-blue-800">أدمن</span>
                 </div>
-                <p class="text-sm text-gray-500">إدارة الطلبيات، الاتصال المباشر، والتحليلات</p>
+                <p class="text-sm text-gray-500">إدارة الطلبيات، طباعة الوصل، والتحليلات</p>
             </div>
             <div class="flex flex-wrap gap-2">
                 <button id="btnSettings" onclick="toggleModal('settingsModal')" class="hidden bg-gray-800 text-white font-bold px-4 py-2 rounded-lg text-sm">⚙️ الإعدادات</button>
@@ -95,6 +112,7 @@
                             <th class="p-4">تواصل سريع</th>
                             <th class="p-4">العنوان</th>
                             <th class="p-4">الحالة</th>
+                            <th class="p-4">طباعة الوصل</th>
                             <th class="p-4">ملاحظات العميل</th>
                         </tr>
                     </thead>
@@ -104,8 +122,64 @@
         </div>
     </div>
 
-    <!-- نافذة الإعدادات (خاصة بالأدمن فقط) -->
-    <div id="settingsModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+    <!-- 🏷️ نافذة وصل التوصيل للطباعة (Shipping Label Modal) -->
+    <div id="labelModal" class="hidden fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center p-4">
+        <div class="bg-white p-6 rounded-2xl shadow-2xl max-w-lg w-full">
+            
+            <div id="printableArea" class="border-4 border-black p-5 bg-white text-black font-sans rounded-none">
+                <!-- الهيدر -->
+                <div class="flex justify-between items-center border-b-2 border-black pb-3 mb-3">
+                    <div>
+                        <h2 id="lblStoreName" class="font-black text-xl tracking-wide uppercase">اسم المتجر</h2>
+                        <p class="text-xs font-bold text-gray-700">وصل التوصيل - الدفع عند الاستلام (COD)</p>
+                    </div>
+                    <div class="text-left">
+                        <span id="lblOrderId" class="font-black text-lg border-2 border-black px-2 py-1">#000</span>
+                    </div>
+                </div>
+
+                <!-- معلومات المرسل إليه (الزبون) -->
+                <div class="border-2 border-black p-3 mb-3 bg-gray-50">
+                    <div class="text-[10px] font-bold text-gray-500 uppercase border-b mb-1">المرسل إليه (الزبون / Destinataire):</div>
+                    <div id="lblCustomerName" class="font-black text-lg text-black">محمد بن علي</div>
+                    <div id="lblCustomerPhone" class="font-black text-xl text-black my-1">📞 0550123456</div>
+                    <div id="lblCustomerAddress" class="font-bold text-md text-gray-900">الجزائر - باب الزوار</div>
+                </div>
+
+                <!-- تفاصيل المنتج -->
+                <div class="border-2 border-black p-3 mb-3">
+                    <div class="text-[10px] font-bold text-gray-500 uppercase border-b mb-1">محتوى الطرد (Contenu):</div>
+                    <div class="flex justify-between items-center font-bold text-sm">
+                        <span id="lblProduct">Smart Watch Series 9</span>
+                        <span id="lblQty" class="border border-black px-2">الكمية: 1</span>
+                    </div>
+                </div>
+
+                <!-- المبلغ المطلوب تحصيله (بخط ضخم) -->
+                <div class="border-4 border-black p-3 text-center bg-black text-white">
+                    <div class="text-xs font-bold uppercase">المبلغ المطلوب تحصيله من الزبون:</div>
+                    <div id="lblTotalPrice" class="text-3xl font-black tracking-wider my-1">5,100 د.ج</div>
+                    <div class="text-[10px] font-bold text-gray-300">⚠️ يرجى عدم تسليم الطرد إلا بعد استلام المبلغ كاملاً</div>
+                </div>
+
+                <!-- الباركود الافتراضي للتجميل -->
+                <div class="mt-3 text-center">
+                    <div class="font-mono text-xs tracking-widest font-bold">||||| | |||||||| ||| ||||||| ||||</div>
+                    <div class="text-[9px] text-gray-500">COD-EXPRESS-DELIVERY-LABEL</div>
+                </div>
+            </div>
+
+            <div class="flex gap-2 mt-4 no-print">
+                <button onclick="window.print()" class="flex-1 bg-emerald-600 text-white font-black py-3 rounded-xl hover:bg-emerald-700 shadow-lg text-sm flex items-center justify-center gap-1">
+                    🖨️ إرسال للطابعة الآن
+                </button>
+                <button onclick="toggleModal('labelModal')" class="bg-gray-300 text-gray-700 px-5 rounded-xl font-bold text-sm">إلغاء</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- نافذة الإعدادات -->
+    <div id="settingsModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 no-print">
         <div class="bg-white p-6 rounded-2xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
             <h2 class="text-xl font-bold text-gray-800 mb-4">⚙️ إعدادات المتجر والحسابات</h2>
             <form id="settingsForm" class="space-y-3 text-xs">
@@ -259,6 +333,11 @@
                             </select>
                         </td>
                         <td class="p-4">
+                            <button onclick="openShippingLabel(${o.id})" class="bg-gray-800 hover:bg-black text-white px-2.5 py-1 rounded font-bold text-xs flex items-center gap-1">
+                                🖨️ وصل الطرد
+                            </button>
+                        </td>
+                        <td class="p-4">
                             <input type="text" value="${o.notes || ''}" 
                                 onblur="updateOrderNotes(${o.id}, '${o.status}', this.value)"
                                 placeholder="ملاحظة..." class="text-xs p-1 border rounded w-full">
@@ -275,6 +354,23 @@
             const unitProfit = globalSettings.price - globalSettings.buy_price - globalSettings.shipping_cost - globalSettings.ad_cost;
             const netProfit = confirmed * unitProfit;
             document.getElementById('statNetProfit').innerText = netProfit.toLocaleString() + ' د.ج';
+        }
+
+        // دالة تعبئة الوصل ببيانات الطلبية للطباعة
+        function openShippingLabel(id) {
+            const order = allOrders.find(o => o.id === id);
+            if(!order) return;
+
+            document.getElementById('lblStoreName').innerText = globalSettings.product_name + ' STORE';
+            document.getElementById('lblOrderId').innerText = '#' + order.id;
+            document.getElementById('lblCustomerName').innerText = order.name;
+            document.getElementById('lblCustomerPhone').innerText = '📞 ' + order.phone;
+            document.getElementById('lblCustomerAddress').innerText = order.wilaya + ' - ' + order.commune;
+            document.getElementById('lblProduct').innerText = order.product;
+            document.getElementById('lblQty').innerText = 'الكمية: ' + (order.quantity || 1);
+            document.getElementById('lblTotalPrice').innerText = Number(order.price).toLocaleString() + ' د.ج';
+
+            toggleModal('labelModal');
         }
 
         function filterOrders() {
@@ -338,4 +434,4 @@
         });
     </script>
 </body>
-    </html>
+</html>
