@@ -1071,20 +1071,23 @@ function logout() {
   window.location.href = '/';
 }
 
-// ============ PRINT BORDEREAU FUNCTIONS ============
+// ============ PRINT BORDEREAU FUNCTIONS (FIXED FOR MOBILE) ============
+
+// طباعة وصل فردي
 async function printSingleBordereau(orderId) {
   try {
+    showToast('جاري تحضير الوصل...', 'warning');
     const data = await apiCall(`/api/orders?limit=100`);
     const order = data.orders.find(o => o.id === orderId);
     if (!order) return showToast('الطلبية غير موجودة', 'error');
 
-    generateBordereauHTML([order]);
-    setTimeout(() => { window.print(); }, 300);
+    printBordereauxNative([order]);
   } catch (err) {
     showToast('خطأ في تحضير الوصل للطباعة', 'error');
   }
 }
 
+// طباعة عدة وصليات (Bulk)
 async function printSelectedBordereaux() {
   const selectedIds = Array.from(document.querySelectorAll('.order-check:checked')).map(cb => parseInt(cb.value));
   if (selectedIds.length === 0) {
@@ -1092,79 +1095,130 @@ async function printSelectedBordereaux() {
   }
 
   try {
+    showToast('جاري تحضير الوصليات...', 'warning');
     const data = await apiCall(`/api/orders?limit=100`);
     const selectedOrders = data.orders.filter(o => selectedIds.includes(o.id));
 
-    generateBordereauHTML(selectedOrders);
-    setTimeout(() => { window.print(); }, 500);
+    printBordereauxNative(selectedOrders);
   } catch (err) {
     showToast('خطأ في تحضير الوصليات', 'error');
   }
 }
 
-function generateBordereauHTML(ordersList) {
-  const printContainer = document.getElementById('printArea');
-  
-  let htmlContent = ordersList.map((o) => {
-    const itemsList = (o.items || []).map(i => `<li>- ${i.product_name} <strong>(×${i.quantity})</strong></li>`).join('');
-    
-    return `
-      <div class="page-break border-4 border-black p-4 m-2 text-black bg-white" style="width: 100mm; min-height: 145mm; font-family: 'Tajawal', sans-serif; dir: rtl;">
-        <div class="flex justify-between items-center border-b-2 border-black pb-2 mb-2">
+// محرك الطباعة المعزول عبر Iframe (يمنع الصفحة البيضاء 100%)
+function printBordereauxNative(ordersList) {
+  // حذف أي إطار قديم
+  let oldIframe = document.getElementById('printIframe');
+  if (oldIframe) oldIframe.remove();
+
+  // إنشاء إطار مخفي مستقل
+  const iframe = document.createElement('iframe');
+  iframe.id = 'printIframe';
+  iframe.style.position = 'fixed';
+  iframe.style.right = '0';
+  iframe.style.bottom = '0';
+  iframe.style.width = '0';
+  iframe.style.height = '0';
+  iframe.style.border = '0';
+  document.body.appendChild(iframe);
+
+  const doc = iframe.contentWindow.document;
+
+  let htmlContent = `
+    <!DOCTYPE html>
+    <html dir="rtl" lang="ar">
+    <head>
+      <meta charset="UTF-8">
+      <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@700;900&display=swap" rel="stylesheet">
+      <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"><\/script>
+      <style>
+        @page { size: auto; margin: 0; }
+        * { box-sizing: border-box; font-family: 'Tajawal', sans-serif; }
+        body { margin: 0; padding: 10px; background: #ffffff !important; color: #000000 !important; }
+        .page { width: 95mm; min-height: 140mm; border: 3px solid #000; padding: 10px; margin: 0 auto 15px auto; page-break-after: always; background: #fff; }
+        .border-box { border: 2px solid #000; padding: 6px; margin-bottom: 8px; border-radius: 4px; }
+      </style>
+    </head>
+    <body>
+  `;
+
+  ordersList.forEach(o => {
+    const itemsList = (o.items || []).map(i => `<li style="font-size:12px; font-weight:bold; margin-bottom:2px;">• ${i.product_name} <strong>(×${i.quantity})</strong></li>`).join('');
+    const formattedMoney = new Intl.NumberFormat('ar-DZ', { style: 'decimal', minimumFractionDigits: 0 }).format(o.total_amount || 0) + ' دج';
+
+    htmlContent += `
+      <div class="page">
+        <!-- Header -->
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #000; padding-bottom:5px; margin-bottom:8px;">
           <div>
-            <h2 class="text-xl font-black uppercase tracking-wider">متجر التجارة الإلكترونية</h2>
-            <p class="text-xs font-bold">وصل تسليم - COD Algeria</p>
+            <h2 style="font-size:16px; font-weight:900; margin:0;">متجر التجارة الإلكترونية</h2>
+            <p style="font-size:11px; font-weight:bold; margin:0;">وصل تسليم - COD Algeria</p>
           </div>
-          <div class="text-left">
-            <span class="text-xs font-bold block">التاريخ: ${new Date(o.created_at).toLocaleDateString('ar-DZ')}</span>
-            <span class="text-xs font-bold block">نوع التوصيل: ${o.delivery_type === 'home' ? 'منزل 🏠' : 'مكتب 🏢'}</span>
+          <div style="text-align:left; font-size:10px; font-weight:bold;">
+            <div>التاريخ: ${new Date(o.created_at).toLocaleDateString('ar-DZ')}</div>
+            <div>التوصيل: ${o.delivery_type === 'home' ? 'منزل 🏠' : 'مكتب 🏢'}</div>
           </div>
         </div>
 
-        <div class="text-center my-2 bg-gray-100 p-1 border border-black rounded">
-          <svg id="barcode-${o.id}" class="w-full h-12"></svg>
+        <!-- Barcode Area -->
+        <div style="text-align:center; margin:8px 0; background:#f3f4f6; padding:4px; border:1px solid #000;">
+          <svg id="barcode-${o.id}" style="width:100%; height:45px;"></svg>
         </div>
 
-        <div class="border-2 border-black p-2 mb-2 rounded bg-gray-50">
-          <p class="text-xs text-gray-600 font-bold">معلومات الزبون:</p>
-          <p class="text-base font-black">${o.customer_name}</p>
-          <p class="text-sm font-black dir-ltr text-right">📱 ${o.customer_phone} ${o.customer_phone2 ? ' / ' + o.customer_phone2 : ''}</p>
-          <p class="text-sm font-bold mt-1">📍 ${o.wilaya_code || ''} - ${o.wilaya_name || ''} | ${o.commune || ''}</p>
-          <p class="text-xs font-medium">${o.address || ''}</p>
+        <!-- Customer Info -->
+        <div class="border-box" style="background:#fafafa;">
+          <div style="font-size:10px; color:#555; font-weight:bold;">معلومات الزبون:</div>
+          <div style="font-size:15px; font-weight:900; color:#000;">${o.customer_name}</div>
+          <div style="font-size:13px; font-weight:900; direction:ltr; text-align:right;">📱 ${o.customer_phone} ${o.customer_phone2 ? ' / ' + o.customer_phone2 : ''}</div>
+          <div style="font-size:12px; font-weight:bold; margin-top:3px;">📍 ${o.wilaya_code || ''} - ${o.wilaya_name || ''} | ${o.commune || ''}</div>
+          <div style="font-size:11px;">${o.address || ''}</div>
         </div>
 
-        <div class="border border-black p-2 mb-2 rounded min-h-[35mm]">
-          <p class="text-xs text-gray-600 font-bold border-b border-gray-300 pb-1 mb-1">محتوى الطرد:</p>
-          <ul class="text-xs space-y-1 font-bold">
+        <!-- Order Items -->
+        <div class="border-box" style="min-height:30mm;">
+          <div style="font-size:10px; color:#555; font-weight:bold; border-bottom:1px solid #ccc; padding-bottom:3px; margin-bottom:4px;">محتوى الطرد:</div>
+          <ul style="list-style:none; padding:0; margin:0;">
             ${itemsList}
           </ul>
         </div>
 
-        <div class="border-2 border-black p-2 text-center rounded bg-black text-white">
-          <span class="text-xs block font-bold">المبلغ المطلوب تحصيله (COD):</span>
-          <span class="text-2xl font-black">${formatMoney(o.total_amount)}</span>
+        <!-- COD Amount -->
+        <div style="border:2px solid #000; padding:6px; text-align:center; border-radius:4px; background:#000; color:#fff;">
+          <span style="font-size:10px; display:block; font-weight:bold;">المبلغ المطلوب تحصيله (COD):</span>
+          <span style="font-size:22px; font-weight:900;">${formattedMoney}</span>
         </div>
 
-        <div class="mt-2 text-center text-[9px] font-bold text-gray-700">
+        <!-- Footer -->
+        <div style="margin-top:8px; text-align:center; font-size:9px; font-weight:bold; color:#444;">
           شكراً لتسوقكم معنا! يرجى التأكد من الطرد قبل الدفع.
         </div>
       </div>
     `;
-  }).join('');
-
-  printContainer.innerHTML = htmlContent;
-
-  ordersList.forEach(o => {
-    JsBarcode(`#barcode-${o.id}`, o.tracking_id, {
-      format: "CODE128",
-      width: 2,
-      height: 40,
-      displayValue: true,
-      fontSize: 12,
-      margin: 2
-    });
   });
-}
-</script>
-</body>
-  </html>
+
+  htmlContent += `
+      <script>
+        window.onload = function() {
+          const orders = ${JSON.stringify(ordersList)};
+          orders.forEach(o => {
+            try {
+              JsBarcode("#barcode-" + o.id, o.tracking_id, {
+                format: "CODE128", width: 2, height: 40, displayValue: true, fontSize: 12, margin: 2
+              });
+            } catch(e) { console.error(e); }
+          });
+
+          setTimeout(function() {
+            window.focus();
+            window.print();
+          }, 500);
+        };
+      <\/script>
+    </body>
+    </html>
+  `;
+
+  doc.open();
+  doc.write(htmlContent);
+  doc.close();
+  }
