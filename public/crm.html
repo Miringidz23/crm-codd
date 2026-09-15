@@ -1,426 +1,1206 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>لوحة التحكم الاحترافية (CRM Enterprise)</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <style>
-        body { font-family: 'Tajawal', sans-serif; }
-        @media print {
-            body * { visibility: hidden; }
-            #shippingLabel, #printableArea * { visibility: visible; }
-            #printableArea { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 10px; }
-            .no-print { display: none !important; }
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>COD CRM - لوحة التحكم</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    * { font-family: 'Tajawal', sans-serif; }
+    body { background: #0f172a; color: #e2e8f0; }
+    
+    .sidebar { background: #1e293b; border-left: 1px solid #334155; }
+    .sidebar-item { transition: all 0.2s; }
+    .sidebar-item:hover, .sidebar-item.active { background: #334155; color: #60a5fa; }
+    
+    .stat-card { 
+      background: linear-gradient(135deg, rgba(30,41,59,0.8), rgba(15,23,42,0.9));
+      border: 1px solid #334155;
+      transition: all 0.3s;
+    }
+    .stat-card:hover { border-color: #60a5fa; transform: translateY(-2px); }
+    
+    .table-row { transition: background 0.2s; }
+    .table-row:hover { background: rgba(59,130,246,0.1); }
+    
+    .modal-overlay { 
+      background: rgba(0,0,0,0.7); 
+      backdrop-filter: blur(5px);
+    }
+    .modal-content { 
+      background: #1e293b; 
+      border: 1px solid #334155;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    
+    .status-new { background: #3b82f6; }
+    .status-confirmed { background: #10b981; }
+    .status-cancelled { background: #ef4444; }
+    .status-no_answer { background: #f59e0b; }
+    .status-callback { background: #8b5cf6; }
+    .status-shipped { background: #06b6d4; }
+    .status-delivered { background: #059669; }
+    .status-returned { background: #dc2626; }
+    .status-duplicate { background: #6b7280; }
+    .status-exchange { background: #d97706; }
+
+    .input-field {
+      background: #0f172a;
+      border: 1px solid #334155;
+      color: #e2e8f0;
+      transition: all 0.2s;
+    }
+    .input-field:focus { border-color: #3b82f6; outline: none; box-shadow: 0 0 0 3px rgba(59,130,246,0.2); }
+    
+    select.input-field option { background: #1e293b; color: #e2e8f0; }
+
+    .badge { padding: 2px 10px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; }
+    
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+    .pulse-dot { animation: pulse 2s infinite; }
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(59,130,246,0.4); }
+      70% { box-shadow: 0 0 0 10px rgba(59,130,246,0); }
+      100% { box-shadow: 0 0 0 0 rgba(59,130,246,0); }
+    }
+
+    .tab-btn { transition: all 0.2s; border-bottom: 3px solid transparent; }
+    .tab-btn.active { border-bottom-color: #3b82f6; color: #3b82f6; }
+    .tab-btn:hover { color: #60a5fa; }
+  </style>
 </head>
-<body class="bg-gray-50 min-h-screen">
+<body class="min-h-screen">
 
-    <!-- نافذة تسجيل الدخول -->
-    <div id="loginModal" class="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4 no-print">
-        <div class="bg-white p-6 rounded-2xl shadow-2xl max-w-sm w-full text-center">
-            <span class="text-4xl">🔐</span>
-            <h2 class="text-xl font-bold text-gray-800 mt-2 text-center">دخول الـ CRM</h2>
-            <input type="password" id="loginPass" placeholder="كلمة السر..." class="w-full p-3 border rounded-xl my-4 text-center font-bold outline-none focus:ring-2 focus:ring-emerald-500">
-            <button onclick="login()" class="w-full bg-emerald-600 text-white font-bold py-3 rounded-xl hover:bg-emerald-700">دخول</button>
-        </div>
+<!-- =================== SIDEBAR =================== -->
+<div class="fixed right-0 top-0 h-full w-64 sidebar z-50 flex flex-col" id="sidebar">
+  <!-- Logo -->
+  <div class="p-5 border-b border-gray-700">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+        <i class="fas fa-box text-white"></i>
+      </div>
+      <div>
+        <h1 class="text-lg font-bold text-white">COD CRM</h1>
+        <p class="text-xs text-gray-400">نظام إدارة الطلبيات</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Navigation -->
+  <nav class="flex-1 p-3 space-y-1">
+    <a href="#" onclick="showSection('dashboard')" class="sidebar-item active flex items-center gap-3 px-4 py-3 rounded-xl text-sm" data-section="dashboard">
+      <i class="fas fa-chart-pie w-5"></i> لوحة التحكم
+    </a>
+    <a href="#" onclick="showSection('orders')" class="sidebar-item flex items-center gap-3 px-4 py-3 rounded-xl text-sm" data-section="orders">
+      <i class="fas fa-shopping-cart w-5"></i> الطلبيات
+      <span id="newOrdersBadge" class="mr-auto badge bg-blue-500 text-white hidden">0</span>
+    </a>
+    <a href="#" onclick="showSection('products')" class="sidebar-item flex items-center gap-3 px-4 py-3 rounded-xl text-sm" data-section="products">
+      <i class="fas fa-boxes-stacked w-5"></i> المنتجات والمخزون
+    </a>
+    <a href="#" onclick="showSection('users')" class="sidebar-item flex items-center gap-3 px-4 py-3 rounded-xl text-sm admin-only" data-section="users">
+      <i class="fas fa-users-gear w-5"></i> إدارة المستخدمين
+    </a>
+  </nav>
+
+  <!-- User Info -->
+  <div class="p-4 border-t border-gray-700">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 rounded-full bg-gradient-to-br from-green-400 to-blue-500 flex items-center justify-center">
+        <i class="fas fa-user text-white text-sm"></i>
+      </div>
+      <div class="flex-1 min-w-0">
+        <p class="text-sm font-medium text-white truncate" id="currentUserName">مدير النظام</p>
+        <p class="text-xs text-gray-400" id="currentUserRole">admin</p>
+      </div>
+      <button onclick="logout()" class="text-gray-400 hover:text-red-400 transition-colors" title="تسجيل الخروج">
+        <i class="fas fa-right-from-bracket"></i>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- =================== MAIN CONTENT =================== -->
+<div class="mr-64 min-h-screen">
+
+  <!-- Top Bar -->
+  <div class="sticky top-0 z-40 bg-slate-900/95 backdrop-blur border-b border-gray-700 px-6 py-3">
+    <div class="flex items-center justify-between">
+      <div>
+        <h2 class="text-xl font-bold" id="sectionTitle">لوحة التحكم</h2>
+        <p class="text-xs text-gray-400" id="currentDate"></p>
+      </div>
+      <div class="flex items-center gap-3">
+        <button onclick="loadDashboard()" class="bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded-lg text-sm transition-colors">
+          <i class="fas fa-sync-alt ml-1"></i> تحديث
+        </button>
+        <div class="w-3 h-3 bg-green-500 rounded-full pulse-dot" title="متصل"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== DASHBOARD SECTION ====== -->
+  <div id="section-dashboard" class="p-6 space-y-6">
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4" id="statsGrid">
+      <!-- يتم ملؤها بـ JavaScript -->
     </div>
 
-    <!-- المحتوى الرئيسي -->
-    <div id="mainContent" class="hidden max-w-7xl mx-auto p-4 md:p-8 no-print">
-        
-        <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4 bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-            <div>
-                <div class="flex items-center gap-2">
-                    <h1 class="text-2xl font-bold text-gray-800">نظام إدارة المبيعات والتأكيد</h1>
-                    <span id="roleBadge" class="text-xs font-bold px-2 py-1 rounded-full bg-blue-100 text-blue-800">عامل</span>
-                </div>
-                <p class="text-sm text-gray-500">إدارة الطلبيات، طباعة الوصل، والتحليلات</p>
-            </div>
-            <div class="flex flex-wrap gap-2">
-                <button onclick="toggleModal('manualOrderModal')" class="bg-blue-600 text-white font-bold px-4 py-2 rounded-lg text-sm">➕ إضافة يدوية</button>
-                <button id="btnSettings" onclick="toggleModal('settingsModal')" class="hidden bg-gray-800 text-white font-bold px-4 py-2 rounded-lg text-sm">⚙️ الإعدادات</button>
-                <a href="/api/export-csv" class="bg-emerald-600 text-white font-bold px-4 py-2 rounded-lg text-sm flex items-center gap-1">📥 Excel</a>
-                <button onclick="loadCRM()" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-semibold">🔄 تحديث</button>
-            </div>
+    <!-- Charts & Performance Row -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <!-- أداء العمال -->
+      <div class="stat-card rounded-2xl p-5">
+        <h3 class="text-lg font-bold mb-4"><i class="fas fa-trophy text-yellow-500 ml-2"></i>أداء العمال اليوم</h3>
+        <div id="agentPerformance" class="space-y-3">
+          <!-- يتم ملؤها بـ JavaScript -->
         </div>
+      </div>
 
-        <!-- الإحصائيات -->
-        <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6 text-center">
-            <div class="bg-white p-4 rounded-xl shadow-sm border-r-4 border-blue-500">
-                <div class="text-xs text-gray-500">الطلبيات</div>
-                <div id="statTotal" class="text-xl font-bold">0</div>
-            </div>
-            <div class="bg-white p-4 rounded-xl shadow-sm border-r-4 border-green-500">
-                <div class="text-xs text-gray-500">المؤكدة</div>
-                <div id="statConfirmed" class="text-xl font-bold text-green-600">0</div>
-            </div>
-            <div class="bg-white p-4 rounded-xl shadow-sm border-r-4 border-yellow-500">
-                <div class="text-xs text-gray-500">مؤجل</div>
-                <div id="statPending" class="text-xl font-bold text-yellow-600">0</div>
-            </div>
-            <div class="bg-white p-4 rounded-xl shadow-sm border-r-4 border-red-500">
-                <div class="text-xs text-gray-500">الملغاة</div>
-                <div id="statCancelled" class="text-xl font-bold text-red-600">0</div>
-            </div>
-            <div id="profitCard" class="hidden col-span-2 md:col-span-1 bg-emerald-50 p-4 rounded-xl border-r-4 border-emerald-600">
-                <div class="text-xs font-bold text-emerald-800">💵 الأرباح الصافية</div>
-                <div id="statNetProfit" class="text-xl font-bold text-emerald-700">0 د.ج</div>
-            </div>
+      <!-- تنبيهات المخزون -->
+      <div class="stat-card rounded-2xl p-5">
+        <h3 class="text-lg font-bold mb-4"><i class="fas fa-triangle-exclamation text-red-500 ml-2"></i>تنبيهات المخزون</h3>
+        <div id="lowStockAlerts" class="space-y-3">
+          <!-- يتم ملؤها بـ JavaScript -->
         </div>
+      </div>
+    </div>
 
-        <!-- البحث -->
-        <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-6 flex flex-col md:flex-row gap-3">
-            <input type="text" id="searchInput" onkeyup="filterOrders()" placeholder="🔍 ابحث بالاسم أو رقم الهاتف..." class="w-full p-2.5 border rounded-lg text-sm outline-none">
-            <select id="statusFilter" onchange="filterOrders()" class="w-full md:w-48 p-2.5 border rounded-lg text-sm font-bold bg-gray-50">
-                <option value="ALL">جميع الحالات</option>
-                <option value="جديد">جديد</option>
-                <option value="مؤكد">مؤكد ✅</option>
-                <option value="لا يجيب 1">لا يجيب 1</option>
-                <option value="لا يجيب 2">لا يجيب 2</option>
-                <option value="مؤجل">مؤجل ⏳</option>
-                <option value="ملغى">ملغى ❌</option>
+    <!-- Overall Stats -->
+    <div class="stat-card rounded-2xl p-5">
+      <h3 class="text-lg font-bold mb-4"><i class="fas fa-chart-bar text-blue-500 ml-2"></i>الإحصائيات العامة</h3>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="overallStats">
+        <!-- يتم ملؤها بـ JavaScript -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== ORDERS SECTION ====== -->
+  <div id="section-orders" class="p-6 space-y-4 hidden">
+    <!-- Orders Toolbar -->
+    <div class="flex flex-wrap items-center gap-3">
+      <button onclick="openNewOrderModal()" class="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-5 py-2.5 rounded-xl font-medium transition-all">
+        <i class="fas fa-plus ml-2"></i>طلبية جديدة
+      </button>
+      <button onclick="autoAssignOrders()" class="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2.5 rounded-xl font-medium transition-all admin-only">
+        <i class="fas fa-wand-magic-sparkles ml-2"></i>توزيع تلقائي
+      </button>
+      
+      <div class="flex-1"></div>
+      
+      <!-- Filters -->
+      <select id="filterStatus" onchange="loadOrders()" class="input-field rounded-xl px-4 py-2.5 text-sm">
+        <option value="">جميع الحالات</option>
+        <option value="new">جديدة</option>
+        <option value="confirmed">مؤكدة</option>
+        <option value="cancelled">ملغاة</option>
+        <option value="no_answer">لا يجيب</option>
+        <option value="callback">إعادة اتصال</option>
+        <option value="shipped">تم الشحن</option>
+        <option value="delivered">تم التوصيل</option>
+        <option value="returned">مرتجعة</option>
+      </select>
+      
+      <input type="text" id="searchOrders" placeholder="بحث بالاسم أو الهاتف..."
+             onkeyup="debounceSearch()" class="input-field rounded-xl px-4 py-2.5 text-sm w-64">
+    </div>
+
+    <!-- Orders Table -->
+    <div class="stat-card rounded-2xl overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="bg-slate-800/50 text-gray-400">
+              <th class="px-4 py-3 text-right">
+                <input type="checkbox" id="selectAll" onchange="toggleSelectAll()" class="rounded">
+              </th>
+              <th class="px-4 py-3 text-right">رقم التتبع</th>
+              <th class="px-4 py-3 text-right">العميل</th>
+              <th class="px-4 py-3 text-right">الهاتف</th>
+              <th class="px-4 py-3 text-right">الولاية</th>
+              <th class="px-4 py-3 text-right">المنتجات</th>
+              <th class="px-4 py-3 text-right">المبلغ</th>
+              <th class="px-4 py-3 text-right">الحالة</th>
+              <th class="px-4 py-3 text-right">المعين إليه</th>
+              <th class="px-4 py-3 text-right">التاريخ</th>
+              <th class="px-4 py-3 text-center">إجراءات</th>
+            </tr>
+          </thead>
+          <tbody id="ordersTableBody">
+            <!-- يتم ملؤها بـ JavaScript -->
+          </tbody>
+        </table>
+      </div>
+      
+      <!-- Pagination -->
+      <div class="flex items-center justify-between px-4 py-3 border-t border-gray-700">
+        <span class="text-sm text-gray-400" id="ordersCount">0 طلبية</span>
+        <div class="flex gap-2" id="pagination"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== PRODUCTS SECTION ====== -->
+  <div id="section-products" class="p-6 space-y-4 hidden">
+    <div class="flex items-center gap-3 mb-4">
+      <button onclick="openNewProductModal()" class="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-5 py-2.5 rounded-xl font-medium transition-all">
+        <i class="fas fa-plus ml-2"></i>منتج جديد
+      </button>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="productsGrid">
+      <!-- يتم ملؤها بـ JavaScript -->
+    </div>
+  </div>
+
+  <!-- ====== USERS SECTION ====== -->
+  <div id="section-users" class="p-6 space-y-4 hidden">
+    <div class="flex items-center gap-3 mb-4">
+      <button onclick="openNewUserModal()" class="bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white px-5 py-2.5 rounded-xl font-medium transition-all">
+        <i class="fas fa-user-plus ml-2"></i>مستخدم جديد
+      </button>
+    </div>
+
+    <div class="stat-card rounded-2xl overflow-hidden">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="bg-slate-800/50 text-gray-400">
+            <th class="px-4 py-3 text-right">الاسم</th>
+            <th class="px-4 py-3 text-right">اسم المستخدم</th>
+            <th class="px-4 py-3 text-right">الدور</th>
+            <th class="px-4 py-3 text-right">الهاتف</th>
+            <th class="px-4 py-3 text-right">الحد اليومي</th>
+            <th class="px-4 py-3 text-right">طلبيات معلقة</th>
+            <th class="px-4 py-3 text-right">مؤكدة اليوم</th>
+            <th class="px-4 py-3 text-right">الحالة</th>
+            <th class="px-4 py-3 text-center">إجراءات</th>
+          </tr>
+        </thead>
+        <tbody id="usersTableBody">
+          <!-- يتم ملؤها بـ JavaScript -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<!-- =================== MODALS =================== -->
+
+<!-- New Order Modal -->
+<div id="newOrderModal" class="fixed inset-0 z-50 hidden">
+  <div class="modal-overlay absolute inset-0" onclick="closeModal('newOrderModal')"></div>
+  <div class="relative z-10 flex items-start justify-center pt-10 px-4 min-h-screen">
+    <div class="modal-content rounded-2xl w-full max-w-3xl p-6">
+      <div class="flex items-center justify-between mb-6">
+        <h3 class="text-xl font-bold"><i class="fas fa-plus-circle text-blue-500 ml-2"></i>طلبية جديدة</h3>
+        <button onclick="closeModal('newOrderModal')" class="text-gray-400 hover:text-white">
+          <i class="fas fa-times text-xl"></i>
+        </button>
+      </div>
+
+      <form id="newOrderForm" onsubmit="createOrder(event)" class="space-y-4">
+        <!-- بيانات العميل -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-300 mb-1">اسم العميل *</label>
+            <input type="text" name="customer_name" required class="input-field w-full rounded-xl px-4 py-2.5">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-300 mb-1">رقم الهاتف *</label>
+            <input type="tel" name="customer_phone" required class="input-field w-full rounded-xl px-4 py-2.5" 
+                   placeholder="05XXXXXXXX">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-300 mb-1">هاتف ثاني</label>
+            <input type="tel" name="customer_phone2" class="input-field w-full rounded-xl px-4 py-2.5">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-300 mb-1">الولاية *</label>
+            <select name="wilaya_id" required class="input-field w-full rounded-xl px-4 py-2.5" id="orderWilaya"
+                    onchange="updateDeliveryCost()">
+              <option value="">اختر الولاية</option>
             </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-300 mb-1">البلدية</label>
+            <input type="text" name="commune" class="input-field w-full rounded-xl px-4 py-2.5">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-300 mb-1">نوع التوصيل</label>
+            <select name="delivery_type" class="input-field w-full rounded-xl px-4 py-2.5" onchange="updateDeliveryCost()">
+              <option value="desk">مكتب (Bureau)</option>
+              <option value="home">منزل (Domicile)</option>
+            </select>
+          </div>
         </div>
 
-        <!-- الجدول -->
-        <div class="bg-white rounded-xl shadow-sm overflow-x-auto border border-gray-100">
-            <table class="w-full text-right border-collapse">
-                <thead class="bg-gray-100 text-xs">
-                    <tr>
-                        <th class="p-4">#</th>
-                        <th class="p-4">الزبون</th>
-                        <th class="p-4">تواصل</th>
-                        <th class="p-4">العنوان</th>
-                        <th class="p-4">الحالة</th>
-                        <th class="p-4">الوصل</th>
-                    </tr>
-                </thead>
-                <tbody id="ordersTable" class="divide-y text-sm"></tbody>
-            </table>
+        <div>
+          <label class="block text-sm font-medium text-gray-300 mb-1">العنوان</label>
+          <input type="text" name="address" class="input-field w-full rounded-xl px-4 py-2.5">
         </div>
+
+        <!-- المنتجات -->
+        <div class="border border-gray-600 rounded-xl p-4">
+          <div class="flex items-center justify-between mb-3">
+            <h4 class="font-bold text-blue-400"><i class="fas fa-boxes-stacked ml-2"></i>المنتجات</h4>
+            <button type="button" onclick="addProductRow()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-sm">
+              <i class="fas fa-plus ml-1"></i>إضافة منتج
+            </button>
+          </div>
+          <div id="orderItemsContainer" class="space-y-3">
+            <!-- يتم إضافة صفوف المنتجات هنا -->
+          </div>
+          <div class="mt-4 pt-3 border-t border-gray-600 flex justify-between items-center">
+            <span class="text-gray-400">تكلفة التوصيل: <strong class="text-white" id="deliveryCostDisplay">0 دج</strong></span>
+            <span class="text-lg font-bold">المجموع: <strong class="text-green-400" id="orderTotalDisplay">0 دج</strong></span>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-300 mb-1">ملاحظات</label>
+          <textarea name="notes" rows="2" class="input-field w-full rounded-xl px-4 py-2.5"></textarea>
+        </div>
+
+        <div class="flex gap-3 pt-2">
+          <button type="submit" class="flex-1 bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 rounded-xl font-bold text-lg hover:from-blue-600 hover:to-purple-700 transition-all">
+            <i class="fas fa-save ml-2"></i>حفظ الطلبية
+          </button>
+          <button type="button" onclick="closeModal('newOrderModal')" class="px-6 py-3 bg-gray-700 hover:bg-gray-600 rounded-xl font-medium transition-colors">
+            إلغاء
+          </button>
+        </div>
+      </form>
     </div>
+  </div>
+</div>
 
-    <!-- ⚙️ نافذة الإعدادات (خاصة بالأدمن) -->
-    <div id="settingsModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 no-print">
-        <div class="bg-white p-6 rounded-2xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
-            <h2 class="text-xl font-bold text-gray-800 mb-4">⚙️ إعدادات المتجر والحسابات</h2>
-            <form id="settingsForm" class="space-y-3 text-xs">
-                <div>
-                    <label class="font-bold">اسم المنتج</label>
-                    <input type="text" id="setProductName" class="w-full p-2 border rounded">
-                </div>
-                <div class="grid grid-cols-2 gap-2">
-                    <div>
-                        <label class="font-bold">سعر البيع (د.ج)</label>
-                        <input type="number" id="setPrice" class="w-full p-2 border rounded">
-                    </div>
-                    <div>
-                        <label class="font-bold">سعر الشراء (د.ج)</label>
-                        <input type="number" id="setBuyPrice" class="w-full p-2 border rounded">
-                    </div>
-                </div>
-                <div class="grid grid-cols-2 gap-2">
-                    <div>
-                        <label class="font-bold">تكلفة التوصيل (د.ج)</label>
-                        <input type="number" id="setShippingCost" class="w-full p-2 border rounded">
-                    </div>
-                    <div>
-                        <label class="font-bold">تكلفة الإعلان للطلب (د.ج)</label>
-                        <input type="number" id="setAdCost" class="w-full p-2 border rounded">
-                    </div>
-                </div>
-                <div>
-                    <label class="font-bold">رابط صورة المنتج</label>
-                    <input type="text" id="setImageUrl" class="w-full p-2 border rounded">
-                </div>
-                <hr class="my-2">
-                <div class="grid grid-cols-2 gap-2">
-                    <div>
-                        <label class="font-bold text-red-600">كلمة سر الأدمن</label>
-                        <input type="text" id="setAdminPass" class="w-full p-2 border rounded">
-                    </div>
-                    <div>
-                        <label class="font-bold text-blue-600">كلمة سر العامل (Agent)</label>
-                        <input type="text" id="setAgentPass" class="w-full p-2 border rounded">
-                    </div>
-                </div>
-                <hr class="my-2">
-                <h3 class="font-bold text-gray-700">🔔 إشعار التلغرام:</h3>
-                <div>
-                    <label>Bot Token</label>
-                    <input type="text" id="setTgToken" class="w-full p-2 border rounded">
-                </div>
-                <div>
-                    <label>Chat ID</label>
-                    <input type="text" id="setTgChatId" class="w-full p-2 border rounded">
-                </div>
+<!-- New Product Modal -->
+<div id="newProductModal" class="fixed inset-0 z-50 hidden">
+  <div class="modal-overlay absolute inset-0" onclick="closeModal('newProductModal')"></div>
+  <div class="relative z-10 flex items-start justify-center pt-10 px-4 min-h-screen">
+    <div class="modal-content rounded-2xl w-full max-w-lg p-6">
+      <div class="flex items-center justify-between mb-6">
+        <h3 class="text-xl font-bold"><i class="fas fa-box text-green-500 ml-2"></i>منتج جديد</h3>
+        <button onclick="closeModal('newProductModal')" class="text-gray-400 hover:text-white">
+          <i class="fas fa-times text-xl"></i>
+        </button>
+      </div>
 
-                <div class="flex gap-2 pt-3">
-                    <button type="submit" class="flex-1 bg-emerald-600 text-white font-bold py-2 rounded">حفظ التغييرات</button>
-                    <button type="button" onclick="toggleModal('settingsModal')" class="bg-gray-300 text-gray-700 px-4 rounded">إلغاء</button>
-                </div>
-            </form>
+      <form id="newProductForm" onsubmit="createProduct(event)" class="space-y-4">
+        <div class="grid grid-cols-2 gap-4">
+          <div class="col-span-2">
+            <label class="block text-sm font-medium text-gray-300 mb-1">اسم المنتج *</label>
+            <input type="text" name="name" required class="input-field w-full rounded-xl px-4 py-2.5">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-300 mb-1">رمز SKU *</label>
+            <input type="text" name="sku" required class="input-field w-full rounded-xl px-4 py-2.5" placeholder="PROD-001">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-300 mb-1">الوزن (كغ)</label>
+            <input type="number" name="weight" step="0.1" value="0.5" class="input-field w-full rounded-xl px-4 py-2.5">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-300 mb-1">سعر الشراء (دج)</label>
+            <input type="number" name="purchase_price" value="0" class="input-field w-full rounded-xl px-4 py-2.5">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-300 mb-1">سعر البيع (دج) *</label>
+            <input type="number" name="sale_price" required class="input-field w-full rounded-xl px-4 py-2.5">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-300 mb-1">الكمية في المخزون</label>
+            <input type="number" name="stock_quantity" value="0" class="input-field w-full rounded-xl px-4 py-2.5">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-300 mb-1">تنبيه الحد الأدنى</label>
+            <input type="number" name="min_stock_alert" value="10" class="input-field w-full rounded-xl px-4 py-2.5">
+          </div>
+          <div class="col-span-2">
+            <label class="block text-sm font-medium text-gray-300 mb-1">الوصف</label>
+            <textarea name="description" rows="2" class="input-field w-full rounded-xl px-4 py-2.5"></textarea>
+          </div>
         </div>
-    </div>
 
-    <!-- ➕ نافذة الإضافة اليدوية -->
-    <div id="manualOrderModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 no-print">
-        <div class="bg-white p-6 rounded-2xl shadow-xl max-w-sm w-full">
-            <h2 class="text-xl font-bold mb-4">➕ إضافة طلبية يدوية</h2>
-            <form id="manualOrderForm" class="space-y-3 text-xs">
-                <input type="text" id="mName" placeholder="اسم الزبون" class="w-full p-2 border rounded" required>
-                <input type="text" id="mPhone" placeholder="رقم الهاتف" class="w-full p-2 border rounded" required>
-                <input type="text" id="mWilaya" placeholder="الولاية" class="w-full p-2 border rounded" required>
-                <input type="text" id="mProduct" placeholder="اسم المنتج" class="w-full p-2 border rounded" required>
-                <input type="number" id="mPrice" placeholder="السعر (دج)" class="w-full p-2 border rounded" required>
-                <select id="mStatus" class="w-full p-2 border rounded font-bold">
-                    <option value="جديد">جديد</option>
-                    <option value="مؤكد">مؤكد</option>
-                </select>
-                <div class="flex gap-2 pt-2">
-                    <button type="submit" class="flex-1 bg-blue-600 text-white py-2 rounded font-bold">حفظ</button>
-                    <button type="button" onclick="toggleModal('manualOrderModal')" class="flex-1 bg-gray-200 py-2 rounded">إلغاء</button>
-                </div>
-            </form>
+        <button type="submit" class="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white py-3 rounded-xl font-bold text-lg hover:from-green-600 hover:to-emerald-700 transition-all">
+          <i class="fas fa-save ml-2"></i>حفظ المنتج
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- New User Modal -->
+<div id="newUserModal" class="fixed inset-0 z-50 hidden">
+  <div class="modal-overlay absolute inset-0" onclick="closeModal('newUserModal')"></div>
+  <div class="relative z-10 flex items-start justify-center pt-10 px-4 min-h-screen">
+    <div class="modal-content rounded-2xl w-full max-w-lg p-6">
+      <div class="flex items-center justify-between mb-6">
+        <h3 class="text-xl font-bold"><i class="fas fa-user-plus text-purple-500 ml-2"></i>مستخدم جديد</h3>
+        <button onclick="closeModal('newUserModal')" class="text-gray-400 hover:text-white">
+          <i class="fas fa-times text-xl"></i>
+        </button>
+      </div>
+
+      <form id="newUserForm" onsubmit="createUser(event)" class="space-y-4">
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-300 mb-1">الاسم الكامل *</label>
+            <input type="text" name="full_name" required class="input-field w-full rounded-xl px-4 py-2.5">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-300 mb-1">اسم المستخدم *</label>
+            <input type="text" name="username" required class="input-field w-full rounded-xl px-4 py-2.5">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-300 mb-1">كلمة المرور *</label>
+            <input type="password" name="password" required class="input-field w-full rounded-xl px-4 py-2.5">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-300 mb-1">الدور *</label>
+            <select name="role" required class="input-field w-full rounded-xl px-4 py-2.5">
+              <option value="agent">عامل تأكيد (Agent)</option>
+              <option value="supervisor">مشرف (Supervisor)</option>
+              <option value="admin">مدير (Admin)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-300 mb-1">رقم الهاتف</label>
+            <input type="tel" name="phone" class="input-field w-full rounded-xl px-4 py-2.5">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-300 mb-1">الحد اليومي</label>
+            <input type="number" name="max_daily_orders" value="50" class="input-field w-full rounded-xl px-4 py-2.5">
+          </div>
         </div>
-    </div>
 
-    <!-- 🏷️ نافذة وصل التوصيل للطباعة -->
-    <div id="labelModal" class="hidden fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center p-4">
-        <div class="bg-white p-6 rounded-2xl max-w-lg w-full">
-            <div id="printableArea" class="border-4 border-black p-5 bg-white text-black rounded-none">
-                <div class="flex justify-between border-b-2 border-black pb-2 mb-2">
-                    <h2 id="lblStoreName" class="font-black text-xl">STORE</h2>
-                    <span id="lblOrderId" class="font-black border-2 border-black px-2">#000</span>
-                </div>
-                <div class="border-2 border-black p-2 mb-2">
-                    <div id="lblCustomerName" class="font-black text-lg">---</div>
-                    <div id="lblCustomerPhone" class="font-black text-xl my-1">---</div>
-                    <div id="lblCustomerAddress" class="font-bold text-md text-gray-800">---</div>
-                </div>
-                <div class="border-2 border-black p-2 mb-2 text-xs font-bold">
-                    <span id="lblProduct">المنتج</span> - <span id="lblQty">الكمية: 1</span>
-                </div>
-                <div class="border-4 border-black p-2 text-center bg-black text-white">
-                    <div class="text-xs font-bold uppercase">المبلغ المطلوب تحصيله:</div>
-                    <div id="lblTotalPrice" class="text-3xl font-black my-1">0 د.ج</div>
-                </div>
-            </div>
-            <button onclick="window.print()" class="w-full bg-emerald-600 text-white font-black py-3 mt-4 rounded-xl no-print">🖨️ طباعة الآن</button>
-            <button onclick="toggleModal('labelModal')" class="w-full bg-gray-200 py-2 mt-2 rounded-xl text-sm font-bold no-print">إلغاء</button>
+        <button type="submit" class="w-full bg-gradient-to-r from-purple-500 to-pink-600 text-white py-3 rounded-xl font-bold text-lg hover:from-purple-600 hover:to-pink-700 transition-all">
+          <i class="fas fa-save ml-2"></i>إنشاء الحساب
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Status Change Modal -->
+<div id="statusModal" class="fixed inset-0 z-50 hidden">
+  <div class="modal-overlay absolute inset-0" onclick="closeModal('statusModal')"></div>
+  <div class="relative z-10 flex items-center justify-center min-h-screen px-4">
+    <div class="modal-content rounded-2xl w-full max-w-md p-6">
+      <h3 class="text-xl font-bold mb-4"><i class="fas fa-edit text-blue-500 ml-2"></i>تغيير حالة الطلبية</h3>
+      <p class="text-gray-400 text-sm mb-4" id="statusOrderInfo"></p>
+      
+      <div class="grid grid-cols-2 gap-2 mb-4" id="statusButtons">
+        <button onclick="setOrderStatus('confirmed')" class="bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-medium transition-all">
+          <i class="fas fa-check ml-1"></i> مؤكدة
+        </button>
+        <button onclick="setOrderStatus('cancelled')" class="bg-red-600 hover:bg-red-700 text-white py-3 rounded-xl font-medium transition-all">
+          <i class="fas fa-times ml-1"></i> ملغاة
+        </button>
+        <button onclick="setOrderStatus('no_answer')" class="bg-yellow-600 hover:bg-yellow-700 text-white py-3 rounded-xl font-medium transition-all">
+          <i class="fas fa-phone-slash ml-1"></i> لا يجيب
+        </button>
+        <button onclick="setOrderStatus('callback')" class="bg-purple-600 hover:bg-purple-700 text-white py-3 rounded-xl font-medium transition-all">
+          <i class="fas fa-phone-volume ml-1"></i> إعادة اتصال
+        </button>
+        <button onclick="setOrderStatus('shipped')" class="bg-cyan-600 hover:bg-cyan-700 text-white py-3 rounded-xl font-medium transition-all">
+          <i class="fas fa-truck ml-1"></i> تم الشحن
+        </button>
+        <button onclick="setOrderStatus('delivered')" class="bg-emerald-700 hover:bg-emerald-800 text-white py-3 rounded-xl font-medium transition-all">
+          <i class="fas fa-check-double ml-1"></i> تم التوصيل
+        </button>
+        <button onclick="setOrderStatus('returned')" class="bg-red-800 hover:bg-red-900 text-white py-3 rounded-xl font-medium transition-all">
+          <i class="fas fa-rotate-left ml-1"></i> مرتجعة
+        </button>
+        <button onclick="setOrderStatus('duplicate')" class="bg-gray-600 hover:bg-gray-700 text-white py-3 rounded-xl font-medium transition-all">
+          <i class="fas fa-copy ml-1"></i> مكررة
+        </button>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-300 mb-1">ملاحظة</label>
+        <textarea id="statusNote" rows="2" class="input-field w-full rounded-xl px-4 py-2.5" placeholder="اختياري..."></textarea>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast Notification -->
+<div id="toast" class="fixed bottom-6 left-6 z-50 hidden">
+  <div class="bg-gray-800 border border-gray-600 rounded-xl px-5 py-3 shadow-2xl flex items-center gap-3">
+    <i id="toastIcon" class="fas fa-check-circle text-green-500"></i>
+    <span id="toastMessage" class="text-sm"></span>
+  </div>
+</div>
+
+
+<!-- =================== JAVASCRIPT =================== -->
+<script>
+// ============ GLOBAL STATE ============
+const API = '';
+let currentUser = null;
+let token = null;
+let wilayas = [];
+let products = [];
+let currentOrderId = null;
+let searchTimeout = null;
+
+// ============ INIT ============
+document.addEventListener('DOMContentLoaded', () => {
+  token = localStorage.getItem('token');
+  currentUser = JSON.parse(localStorage.getItem('user') || 'null');
+  
+  if (!token || !currentUser) {
+    window.location.href = '/';
+    return;
+  }
+
+  document.getElementById('currentUserName').textContent = currentUser.full_name;
+  document.getElementById('currentUserRole').textContent = getRoleLabel(currentUser.role);
+  
+  // إخفاء عناصر الأدمن
+  if (currentUser.role !== 'admin') {
+    document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
+  }
+
+  // تاريخ اليوم
+  const now = new Date();
+  document.getElementById('currentDate').textContent = now.toLocaleDateString('ar-DZ', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+  });
+
+  loadWilayas();
+  loadProducts();
+  loadDashboard();
+});
+
+// ============ API HELPERS ============
+async function apiCall(url, method = 'GET', body = null) {
+  const options = {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    }
+  };
+  if (body) options.body = JSON.stringify(body);
+
+  const res = await fetch(API + url, options);
+  const data = await res.json();
+  
+  if (res.status === 401 || res.status === 403) {
+    localStorage.clear();
+    window.location.href = '/';
+    return;
+  }
+  
+  if (!res.ok) throw new Error(data.error || 'حدث خطأ');
+  return data;
+}
+
+// ============ NAVIGATION ============
+function showSection(section) {
+  document.querySelectorAll('[id^="section-"]').forEach(el => el.classList.add('hidden'));
+  document.getElementById('section-' + section).classList.remove('hidden');
+  
+  document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
+  document.querySelector(`[data-section="${section}"]`)?.classList.add('active');
+
+  const titles = {
+    dashboard: 'لوحة التحكم',
+    orders: 'إدارة الطلبيات',
+    products: 'المنتجات والمخزون',
+    users: 'إدارة المستخدمين'
+  };
+  document.getElementById('sectionTitle').textContent = titles[section];
+
+  if (section === 'orders') loadOrders();
+  if (section === 'products') loadProducts();
+  if (section === 'users') loadUsers();
+  if (section === 'dashboard') loadDashboard();
+}
+
+// ============ DASHBOARD ============
+async function loadDashboard() {
+  try {
+    const data = await apiCall('/api/dashboard/stats');
+    renderDashboardStats(data);
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
+function renderDashboardStats(data) {
+  const t = data.today;
+  const statsCards = [
+    { label: 'جديدة', value: t.new_orders, icon: 'fa-inbox', color: 'blue', bg: 'from-blue-600 to-blue-800' },
+    { label: 'مؤكدة', value: t.confirmed, icon: 'fa-check-circle', color: 'green', bg: 'from-green-600 to-green-800' },
+    { label: 'ملغاة', value: t.cancelled, icon: 'fa-times-circle', color: 'red', bg: 'from-red-600 to-red-800' },
+    { label: 'لا يجيب', value: t.no_answer, icon: 'fa-phone-slash', color: 'yellow', bg: 'from-yellow-600 to-yellow-800' },
+    { label: 'تم التوصيل', value: t.delivered, icon: 'fa-truck', color: 'emerald', bg: 'from-emerald-600 to-emerald-800' },
+    { label: 'مرتجعة', value: t.returned, icon: 'fa-rotate-left', color: 'rose', bg: 'from-rose-600 to-rose-800' },
+  ];
+
+  document.getElementById('statsGrid').innerHTML = statsCards.map(s => `
+    <div class="stat-card rounded-2xl p-4 bg-gradient-to-br ${s.bg}">
+      <div class="flex items-center justify-between mb-2">
+        <i class="fas ${s.icon} text-2xl opacity-80"></i>
+        <span class="text-3xl font-extrabold">${s.value || 0}</span>
+      </div>
+      <p class="text-sm opacity-80">${s.label}</p>
+    </div>
+  `).join('');
+
+  // Badge for new orders
+  const badge = document.getElementById('newOrdersBadge');
+  if (parseInt(t.new_orders) > 0) {
+    badge.textContent = t.new_orders;
+    badge.classList.remove('hidden');
+  } else {
+    badge.classList.add('hidden');
+  }
+
+  // Agent Performance
+  const perfDiv = document.getElementById('agentPerformance');
+  if (data.agentPerformance.length > 0) {
+    perfDiv.innerHTML = data.agentPerformance.map((a, i) => `
+      <div class="flex items-center gap-3 bg-slate-800/50 rounded-xl p-3">
+        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
+          ${i + 1}
         </div>
+        <div class="flex-1">
+          <p class="font-medium text-sm">${a.full_name}</p>
+          <div class="flex gap-3 mt-1 text-xs">
+            <span class="text-green-400"><i class="fas fa-check ml-1"></i>${a.confirmed_today || 0}</span>
+            <span class="text-red-400"><i class="fas fa-times ml-1"></i>${a.cancelled_today || 0}</span>
+            <span class="text-yellow-400"><i class="fas fa-clock ml-1"></i>${a.pending || 0} معلقة</span>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  } else {
+    perfDiv.innerHTML = '<p class="text-gray-500 text-center py-4">لا يوجد عمال</p>';
+  }
+
+  // Low Stock
+  const stockDiv = document.getElementById('lowStockAlerts');
+  if (data.lowStock.length > 0) {
+    stockDiv.innerHTML = data.lowStock.map(p => `
+      <div class="flex items-center justify-between bg-red-900/20 border border-red-800/50 rounded-xl p-3">
+        <div>
+          <p class="font-medium text-sm">${p.name}</p>
+          <p class="text-xs text-gray-400">${p.sku}</p>
+        </div>
+        <div class="text-left">
+          <p class="text-red-400 font-bold">${p.available} متوفر</p>
+          <p class="text-xs text-gray-400">${p.stock_quantity} إجمالي</p>
+        </div>
+      </div>
+    `).join('');
+  } else {
+    stockDiv.innerHTML = '<p class="text-green-400 text-center py-4"><i class="fas fa-check-circle ml-2"></i>جميع المنتجات بمخزون كافي</p>';
+  }
+
+  // Overall Stats
+  const o = data.overall;
+  document.getElementById('overallStats').innerHTML = `
+    <div class="bg-slate-800/50 rounded-xl p-4 text-center">
+      <p class="text-2xl font-bold text-blue-400">${o.total_orders || 0}</p>
+      <p class="text-xs text-gray-400 mt-1">إجمالي الطلبيات</p>
     </div>
+    <div class="bg-slate-800/50 rounded-xl p-4 text-center">
+      <p class="text-2xl font-bold text-green-400">${o.confirmation_rate || 0}%</p>
+      <p class="text-xs text-gray-400 mt-1">نسبة التأكيد</p>
+    </div>
+    <div class="bg-slate-800/50 rounded-xl p-4 text-center">
+      <p class="text-2xl font-bold text-red-400">${o.return_rate || 0}%</p>
+      <p class="text-xs text-gray-400 mt-1">نسبة المرتجعات</p>
+    </div>
+    <div class="bg-slate-800/50 rounded-xl p-4 text-center">
+      <p class="text-2xl font-bold text-emerald-400">${formatMoney(o.total_revenue)}</p>
+      <p class="text-xs text-gray-400 mt-1">إجمالي الإيرادات</p>
+    </div>
+  `;
+}
 
-    <script>
-        let globalSettings = {};
-        let currentRole = 'agent';
-        let allOrders = [];
+// ============ ORDERS ============
+async function loadOrders(page = 1) {
+  try {
+    const status = document.getElementById('filterStatus').value;
+    const search = document.getElementById('searchOrders').value;
+    
+    let url = `/api/orders?page=${page}&limit=30`;
+    if (status) url += `&status=${status}`;
+    if (search) url += `&search=${encodeURIComponent(search)}`;
 
-        function toggleModal(id) {
-            document.getElementById(id).classList.toggle('hidden');
-        }
+    const data = await apiCall(url);
+    renderOrders(data);
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
 
-        async function login() {
-            const pass = document.getElementById('loginPass').value;
-            const res = await fetch('/api/login', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({password: pass})
-            });
-            const data = await res.json();
-            if(res.ok && data.success) {
-                currentRole = data.role;
-                document.getElementById('loginModal').classList.add('hidden');
-                document.getElementById('mainContent').classList.remove('hidden');
+function renderOrders(data) {
+  const tbody = document.getElementById('ordersTableBody');
+  
+  if (data.orders.length === 0) {
+    tbody.innerHTML = `
+      <tr><td colspan="11" class="text-center py-12 text-gray-500">
+        <i class="fas fa-inbox text-4xl mb-3 block"></i>لا توجد طلبيات
+      </td></tr>`;
+    document.getElementById('ordersCount').textContent = '0 طلبية';
+    return;
+  }
 
-                if(currentRole === 'admin') {
-                    document.getElementById('roleBadge').innerText = 'أدمن (مول البيزنس)';
-                    document.getElementById('roleBadge').className = 'text-xs font-bold px-2 py-1 rounded-full bg-purple-100 text-purple-800';
-                    document.getElementById('profitCard').classList.remove('hidden');
-                    document.getElementById('btnSettings').classList.remove('hidden');
-                } else {
-                    document.getElementById('roleBadge').innerText = 'عامل تأكيد (Agent)';
-                    document.getElementById('roleBadge').className = 'text-xs font-bold px-2 py-1 rounded-full bg-blue-100 text-blue-800';
-                }
+  tbody.innerHTML = data.orders.map(o => `
+    <tr class="table-row border-b border-gray-800">
+      <td class="px-4 py-3">
+        <input type="checkbox" class="order-check rounded" value="${o.id}">
+      </td>
+      <td class="px-4 py-3">
+        <span class="text-blue-400 font-mono text-xs">${o.tracking_id}</span>
+      </td>
+      <td class="px-4 py-3 font-medium">${o.customer_name}</td>
+      <td class="px-4 py-3">
+        <div class="flex items-center gap-1">
+          <span class="text-sm">${o.customer_phone}</span>
+          <a href="tel:${o.customer_phone}" class="text-green-500 hover:text-green-400">
+            <i class="fas fa-phone text-xs"></i>
+          </a>
+          <a href="https://wa.me/213${o.customer_phone.substring(1)}" target="_blank" 
+             class="text-green-500 hover:text-green-400">
+            <i class="fab fa-whatsapp text-sm"></i>
+          </a>
+        </div>
+      </td>
+      <td class="px-4 py-3 text-sm">${o.wilaya_code || ''} - ${o.wilaya_name || ''}</td>
+      <td class="px-4 py-3 text-xs">
+        ${(o.items || []).map(it => `${it.product_name} (×${it.quantity})`).join('<br>')}
+      </td>
+      <td class="px-4 py-3 font-bold text-green-400">${formatMoney(o.total_amount)}</td>
+      <td class="px-4 py-3">
+        <span class="badge status-${o.status} text-white">${getStatusLabel(o.status)}</span>
+      </td>
+      <td class="px-4 py-3 text-sm text-gray-400">${o.assigned_to_name || '—'}</td>
+      <td class="px-4 py-3 text-xs text-gray-400">${new Date(o.created_at).toLocaleDateString('ar-DZ')}</td>
+      <td class="px-4 py-3 text-center">
+        <div class="flex items-center justify-center gap-1">
+          <button onclick="openStatusModal(${o.id}, '${o.tracking_id}')" 
+                  class="bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 p-2 rounded-lg transition-colors" title="تغيير الحالة">
+            <i class="fas fa-edit text-xs"></i>
+          </button>
+        </div>
+      </td>
+    </tr>
+  `).join('');
 
-                loadCRM();
-            } else {
-                alert('كلمة السر خاطئة!');
-            }
-        }
+  document.getElementById('ordersCount').textContent = `${data.total} طلبية`;
+  
+  // Pagination
+  const pagDiv = document.getElementById('pagination');
+  if (data.totalPages > 1) {
+    let pages = '';
+    for (let i = 1; i <= data.totalPages; i++) {
+      pages += `<button onclick="loadOrders(${i})" class="px-3 py-1 rounded-lg text-sm ${i === data.page ? 'bg-blue-600 text-white' : 'bg-slate-700 text-gray-300 hover:bg-slate-600'}">${i}</button>`;
+    }
+    pagDiv.innerHTML = pages;
+  } else {
+    pagDiv.innerHTML = '';
+  }
+}
 
-        async function loadCRM() {
-            try {
-                const setRes = await fetch('/api/settings');
-                globalSettings = await setRes.json();
-                
-                // ملء فورمة الإعدادات بالبيانات
-                if(globalSettings) {
-                    document.getElementById('setProductName').value = globalSettings.product_name || '';
-                    document.getElementById('setPrice').value = globalSettings.price || 0;
-                    document.getElementById('setBuyPrice').value = globalSettings.buy_price || 0;
-                    document.getElementById('setShippingCost').value = globalSettings.shipping_cost || 0;
-                    document.getElementById('setAdCost').value = globalSettings.ad_cost || 0;
-                    document.getElementById('setImageUrl').value = globalSettings.image_url || '';
-                    document.getElementById('setAdminPass').value = globalSettings.admin_pass || 'admin123';
-                    document.getElementById('setAgentPass').value = globalSettings.agent_pass || 'agent123';
-                    document.getElementById('setTgToken').value = globalSettings.telegram_token || '';
-                    document.getElementById('setTgChatId').value = globalSettings.telegram_chat_id || '';
-                }
+function debounceSearch() {
+  clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(() => loadOrders(), 400);
+}
 
-                const res = await fetch('/api/orders');
-                allOrders = await res.json();
-                renderTable(allOrders);
-            } catch(e) {
-                console.error("Error loading CRM:", e);
-            }
-        }
+// Create Order
+async function createOrder(e) {
+  e.preventDefault();
+  const form = e.target;
+  
+  const items = [];
+  document.querySelectorAll('.order-item-row').forEach(row => {
+    const productId = row.querySelector('.item-product').value;
+    const quantity = parseInt(row.querySelector('.item-quantity').value);
+    if (productId && quantity > 0) {
+      items.push({ product_id: parseInt(productId), quantity });
+    }
+  });
 
-        function renderTable(orders) {
-            const tbody = document.getElementById('ordersTable');
-            tbody.innerHTML = '';
+  if (items.length === 0) {
+    showToast('يجب إضافة منتج واحد على الأقل', 'error');
+    return;
+  }
 
-            let confirmed = 0, pending = 0, cancelled = 0;
+  try {
+    const data = await apiCall('/api/orders', 'POST', {
+      customer_name: form.customer_name.value,
+      customer_phone: form.customer_phone.value,
+      customer_phone2: form.customer_phone2.value,
+      wilaya_id: parseInt(form.wilaya_id.value),
+      commune: form.commune.value,
+      address: form.address.value,
+      delivery_type: form.delivery_type.value,
+      items,
+      notes: form.notes.value
+    });
 
-            orders.forEach(o => {
-                if (o.status === 'مؤكد') confirmed++;
-                else if (o.status === 'ملغى') cancelled++;
-                else pending++;
+    closeModal('newOrderModal');
+    form.reset();
+    document.getElementById('orderItemsContainer').innerHTML = '';
+    
+    if (data.warning) {
+      showToast(data.warning, 'warning');
+    } else {
+      showToast('تم إنشاء الطلبية بنجاح: ' + data.order.tracking_id, 'success');
+    }
+    
+    loadOrders();
+    loadDashboard();
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
 
-                let cleanPhone = o.phone ? o.phone.replace(/[^0-9]/g, '') : '';
-                if(cleanPhone.startsWith('0')) cleanPhone = '213' + cleanPhone.substring(1);
-                const waMessage = encodeURIComponent(`السلام عليكم ${o.name}، معاك متجرنا بخصوص طلبك لمنتج ${o.product}. هل تؤكد الطلب للتوصيل؟`);
+// Product rows in order
+function addProductRow() {
+  const container = document.getElementById('orderItemsContainer');
+  const row = document.createElement('div');
+  row.className = 'order-item-row flex items-center gap-3 bg-slate-800/50 rounded-xl p-3';
+  
+  const productOptions = products
+    .filter(p => p.is_active)
+    .map(p => `<option value="${p.id}" data-price="${p.sale_price}" data-stock="${p.stock_quantity - p.reserved_quantity}">${p.name} (${formatMoney(p.sale_price)}) - متوفر: ${p.stock_quantity - p.reserved_quantity}</option>`)
+    .join('');
 
-                tbody.innerHTML += `
-                    <tr class="hover:bg-gray-50">
-                        <td class="p-4 font-bold text-gray-600">#${o.id}</td>
-                        <td class="p-4 font-semibold text-gray-800">${o.name}</td>
-                        <td class="p-4 flex gap-1">
-                            <a href="tel:${o.phone}" class="bg-blue-100 text-blue-700 px-2 py-1 rounded font-bold text-xs">📞</a>
-                            <a href="https://wa.me/${cleanPhone}?text=${waMessage}" target="_blank" class="bg-green-100 text-green-700 px-2 py-1 rounded font-bold text-xs flex items-center gap-1">💬</a>
-                        </td>
-                        <td class="p-4 text-gray-600 text-xs">${o.wilaya} - ${o.commune || ''}</td>
-                        <td class="p-4">
-                            <select onchange="updateOrder(${o.id}, this.value, '${o.notes || ''}')" 
-                                class="text-xs font-bold px-2 py-1 rounded-md border 
-                                ${o.status === 'مؤكد' ? 'bg-green-100 text-green-700 border-green-300' : 
-                                  o.status === 'ملغى' ? 'bg-red-100 text-red-700 border-red-300' : 'bg-yellow-100 text-yellow-800 border-yellow-300'}">
-                                <option value="جديد" ${o.status === 'جديد' ? 'selected' : ''}>جديد</option>
-                                <option value="مؤكد" ${o.status === 'مؤكد' ? 'selected' : ''}>مؤكد ✅</option>
-                                <option value="لا يجيب 1" ${o.status === 'لا يجيب 1' ? 'selected' : ''}>لا يجيب 1</option>
-                                <option value="لا يجيب 2" ${o.status === 'لا يجيب 2' ? 'selected' : ''}>لا يجيب 2</option>
-                                <option value="مؤجل" ${o.status === 'مؤجل' ? 'selected' : ''}>مؤجل ⏳</option>
-                                <option value="ملغى" ${o.status === 'ملغى' ? 'selected' : ''}>ملغى ❌</option>
-                            </select>
-                        </td>
-                        <td class="p-4">
-                            <button onclick="openShippingLabel(${o.id})" class="bg-gray-800 hover:bg-black text-white px-2 py-1 rounded font-bold text-xs">
-                                🖨️ وصل
-                            </button>
-                        </td>
-                    </tr>
-                `;
-            });
+  row.innerHTML = `
+    <select class="item-product input-field rounded-lg px-3 py-2 flex-1 text-sm" onchange="updateItemTotal(this)">
+      <option value="">اختر المنتج</option>
+      ${productOptions}
+    </select>
+    <input type="number" class="item-quantity input-field rounded-lg px-3 py-2 w-20 text-center text-sm" 
+           value="1" min="1" onchange="updateItemTotal(this)" onkeyup="updateItemTotal(this)">
+    <span class="item-total text-green-400 font-bold text-sm w-28 text-left">0 دج</span>
+    <button type="button" onclick="this.closest('.order-item-row').remove(); updateOrderTotal()" 
+            class="text-red-400 hover:text-red-300 p-1">
+      <i class="fas fa-trash text-sm"></i>
+    </button>
+  `;
+  
+  container.appendChild(row);
+}
 
-            document.getElementById('statTotal').innerText = allOrders.length;
-            document.getElementById('statConfirmed').innerText = confirmed;
-            document.getElementById('statPending').innerText = pending;
-            document.getElementById('statCancelled').innerText = cancelled;
+function updateItemTotal(el) {
+  const row = el.closest('.order-item-row');
+  const select = row.querySelector('.item-product');
+  const qty = parseInt(row.querySelector('.item-quantity').value) || 0;
+  const option = select.options[select.selectedIndex];
+  const price = parseFloat(option?.dataset?.price || 0);
+  
+  row.querySelector('.item-total').textContent = formatMoney(price * qty);
+  updateOrderTotal();
+}
 
-            const unitProfit = (globalSettings.price || 0) - (globalSettings.buy_price || 0) - (globalSettings.shipping_cost || 0) - (globalSettings.ad_cost || 0);
-            const netProfit = confirmed * unitProfit;
-            document.getElementById('statNetProfit').innerText = netProfit.toLocaleString() + ' د.ج';
-        }
+function updateOrderTotal() {
+  let total = 0;
+  document.querySelectorAll('.order-item-row').forEach(row => {
+    const select = row.querySelector('.item-product');
+    const qty = parseInt(row.querySelector('.item-quantity').value) || 0;
+    const option = select.options[select.selectedIndex];
+    const price = parseFloat(option?.dataset?.price || 0);
+    total += price * qty;
+  });
+  document.getElementById('orderTotalDisplay').textContent = formatMoney(total);
+}
 
-        function openShippingLabel(id) {
-            const order = allOrders.find(o => o.id === id);
-            if(!order) return;
+function updateDeliveryCost() {
+  const wilayaId = document.getElementById('orderWilaya').value;
+  const deliveryType = document.querySelector('[name="delivery_type"]').value;
+  
+  if (wilayaId) {
+    const w = wilayas.find(w => w.id == wilayaId);
+    if (w) {
+      const cost = deliveryType === 'home' ? w.delivery_cost_home : w.delivery_cost_desk;
+      document.getElementById('deliveryCostDisplay').textContent = formatMoney(cost);
+    }
+  }
+}
 
-            document.getElementById('lblStoreName').innerText = (globalSettings.product_name || 'STORE') + ' STORE';
-            document.getElementById('lblOrderId').innerText = '#' + order.id;
-            document.getElementById('lblCustomerName').innerText = order.name;
-            document.getElementById('lblCustomerPhone').innerText = '📞 ' + order.phone;
-            document.getElementById('lblCustomerAddress').innerText = order.wilaya + ' - ' + (order.commune || '');
-            document.getElementById('lblProduct').innerText = order.product;
-            document.getElementById('lblQty').innerText = 'الكمية: ' + (order.quantity || 1);
-            document.getElementById('lblTotalPrice').innerText = Number(order.price).toLocaleString() + ' د.ج';
+// Status
+function openStatusModal(orderId, trackingId) {
+  currentOrderId = orderId;
+  document.getElementById('statusOrderInfo').textContent = `الطلبية: ${trackingId}`;
+  document.getElementById('statusNote').value = '';
+  document.getElementById('statusModal').classList.remove('hidden');
+}
 
-            toggleModal('labelModal');
-        }
+async function setOrderStatus(status) {
+  try {
+    const note = document.getElementById('statusNote').value;
+    await apiCall(`/api/orders/${currentOrderId}/status`, 'PUT', { status, note });
+    closeModal('statusModal');
+    showToast('تم تحديث الحالة بنجاح', 'success');
+    loadOrders();
+    loadDashboard();
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
 
-        function filterOrders() {
-            const query = document.getElementById('searchInput').value.toLowerCase();
-            const status = document.getElementById('statusFilter').value;
+// Auto assign
+async function autoAssignOrders() {
+  try {
+    const data = await apiCall('/api/orders/auto-assign', 'POST');
+    showToast(data.message, 'success');
+    loadOrders();
+    loadDashboard();
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
 
-            const filtered = allOrders.filter(o => {
-                const matchesSearch = o.name.toLowerCase().includes(query) || o.phone.includes(query);
-                const matchesStatus = (status === 'ALL') || (o.status === status);
-                return matchesSearch && matchesStatus;
-            });
+// Select all
+function toggleSelectAll() {
+  const checked = document.getElementById('selectAll').checked;
+  document.querySelectorAll('.order-check').forEach(cb => cb.checked = checked);
+}
 
-            renderTable(filtered);
-        }
+// ============ PRODUCTS ============
+async function loadProducts() {
+  try {
+    products = await apiCall('/api/products');
+    renderProducts();
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
 
-        async function updateOrder(id, status, notes) {
-            await fetch(`/api/orders/${id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status, notes })
-            });
-            loadCRM();
-        }
+function renderProducts() {
+  const grid = document.getElementById('productsGrid');
+  
+  if (products.length === 0) {
+    grid.innerHTML = `<div class="col-span-full text-center py-12 text-gray-500">
+      <i class="fas fa-box-open text-4xl mb-3 block"></i>لا توجد منتجات بعد
+    </div>`;
+    return;
+  }
 
-        document.getElementById('settingsForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const data = {
-                product_name: document.getElementById('setProductName').value,
-                price: Number(document.getElementById('setPrice').value),
-                buy_price: Number(document.getElementById('setBuyPrice').value),
-                shipping_cost: Number(document.getElementById('setShippingCost').value),
-                ad_cost: Number(document.getElementById('setAdCost').value),
-                image_url: document.getElementById('setImageUrl').value,
-                admin_pass: document.getElementById('setAdminPass').value,
-                agent_pass: document.getElementById('setAgentPass').value,
-                telegram_token: document.getElementById('setTgToken').value,
-                telegram_chat_id: document.getElementById('setTgChatId').value
-            };
+  grid.innerHTML = products.map(p => `
+    <div class="stat-card rounded-2xl p-5 ${p.low_stock ? 'border-red-500/50' : ''} ${!p.is_active ? 'opacity-50' : ''}">
+      <div class="flex items-start justify-between mb-3">
+        <div>
+          <h4 class="font-bold text-lg">${p.name}</h4>
+          <p class="text-sm text-gray-400 font-mono">${p.sku}</p>
+        </div>
+        ${p.low_stock ? '<span class="badge bg-red-500 text-white">مخزون منخفض</span>' : ''}
+      </div>
+      
+      <div class="grid grid-cols-2 gap-3 mt-4">
+        <div class="bg-slate-800/50 rounded-lg p-3 text-center">
+          <p class="text-xs text-gray-400">سعر الشراء</p>
+          <p class="font-bold text-blue-400">${formatMoney(p.purchase_price)}</p>
+        </div>
+        <div class="bg-slate-800/50 rounded-lg p-3 text-center">
+          <p class="text-xs text-gray-400">سعر البيع</p>
+          <p class="font-bold text-green-400">${formatMoney(p.sale_price)}</p>
+        </div>
+        <div class="bg-slate-800/50 rounded-lg p-3 text-center">
+          <p class="text-xs text-gray-400">المخزون</p>
+          <p class="font-bold ${p.low_stock ? 'text-red-400' : 'text-white'}">${p.stock_quantity}</p>
+        </div>
+        <div class="bg-slate-800/50 rounded-lg p-3 text-center">
+          <p class="text-xs text-gray-400">المتوفر</p>
+          <p class="font-bold ${p.available_quantity <= 0 ? 'text-red-400' : 'text-emerald-400'}">${p.available_quantity}</p>
+        </div>
+      </div>
+      
+      <div class="mt-3 bg-slate-800/30 rounded-lg p-2">
+        <div class="flex justify-between text-xs text-gray-400 mb-1">
+          <span>المحجوز: ${p.reserved_quantity}</span>
+          <span>الربح/وحدة: ${formatMoney(p.sale_price - p.purchase_price)}</span>
+        </div>
+        <div class="w-full bg-gray-700 rounded-full h-2">
+          <div class="bg-gradient-to-r from-blue-500 to-green-500 h-2 rounded-full" 
+               style="width: ${p.stock_quantity > 0 ? Math.min((p.available_quantity / p.stock_quantity) * 100, 100) : 0}%"></div>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
 
-            await fetch('/api/settings', {
-                method: 'PUT',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(data)
-            });
+async function createProduct(e) {
+  e.preventDefault();
+  const form = e.target;
 
-            alert('تم حفظ الإعدادات بنجاح!');
-            toggleModal('settingsModal');
-            loadCRM();
-        });
+  try {
+    await apiCall('/api/products', 'POST', {
+      name: form.name.value,
+      sku: form.sku.value,
+      description: form.description.value,
+      purchase_price: parseFloat(form.purchase_price.value) || 0,
+      sale_price: parseFloat(form.sale_price.value),
+      weight: parseFloat(form.weight.value) || 0.5,
+      stock_quantity: parseInt(form.stock_quantity.value) || 0,
+      min_stock_alert: parseInt(form.min_stock_alert.value) || 10
+    });
 
-        document.getElementById('manualOrderForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const data = {
-                name: document.getElementById('mName').value,
-                phone: document.getElementById('mPhone').value,
-                wilaya: document.getElementById('mWilaya').value,
-                commune: 'يدوي',
-                product: document.getElementById('mProduct').value,
-                price: document.getElementById('mPrice').value,
-                status: document.getElementById('mStatus').value
-            };
-            
-            await fetch('/api/orders', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(data)
-            });
-            
-            document.getElementById('manualOrderForm').reset();
-            toggleModal('manualOrderModal');
-            loadCRM();
-        });
-    </script>
+    closeModal('newProductModal');
+    form.reset();
+    showToast('تم إنشاء المنتج بنجاح', 'success');
+    loadProducts();
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
+// ============ USERS ============
+async function loadUsers() {
+  try {
+    const users = await apiCall('/api/users');
+    renderUsers(users);
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
+function renderUsers(users) {
+  document.getElementById('usersTableBody').innerHTML = users.map(u => `
+    <tr class="table-row border-b border-gray-800">
+      <td class="px-4 py-3 font-medium">${u.full_name}</td>
+      <td class="px-4 py-3 text-gray-400">${u.username}</td>
+      <td class="px-4 py-3"><span class="badge ${u.role === 'admin' ? 'bg-red-600' : u.role === 'supervisor' ? 'bg-purple-600' : 'bg-blue-600'} text-white">${getRoleLabel(u.role)}</span></td>
+      <td class="px-4 py-3 text-sm">${u.phone || '—'}</td>
+      <td class="px-4 py-3">${u.max_daily_orders}</td>
+      <td class="px-4 py-3 text-yellow-400">${u.pending_orders || 0}</td>
+      <td class="px-4 py-3 text-green-400">${u.today_confirmed || 0}</td>
+      <td class="px-4 py-3">
+        <span class="w-3 h-3 rounded-full inline-block ${u.is_active ? 'bg-green-500' : 'bg-red-500'}"></span>
+        ${u.is_active ? 'نشط' : 'معطل'}
+      </td>
+      <td class="px-4 py-3 text-center">
+        <button onclick="toggleUserStatus(${u.id}, ${!u.is_active})" 
+                class="text-sm ${u.is_active ? 'text-red-400 hover:text-red-300' : 'text-green-400 hover:text-green-300'} transition-colors">
+          <i class="fas ${u.is_active ? 'fa-ban' : 'fa-check-circle'}"></i>
+        </button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+async function createUser(e) {
+  e.preventDefault();
+  const form = e.target;
+
+  try {
+    await apiCall('/api/users', 'POST', {
+      full_name: form.full_name.value,
+      username: form.username.value,
+      password: form.password.value,
+      role: form.role.value,
+      phone: form.phone.value,
+      max_daily_orders: parseInt(form.max_daily_orders.value) || 50
+    });
+
+    closeModal('newUserModal');
+    form.reset();
+    showToast('تم إنشاء الحساب بنجاح', 'success');
+    loadUsers();
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
+async function toggleUserStatus(userId, newStatus) {
+  try {
+    await apiCall(`/api/users/${userId}`, 'PUT', { is_active: newStatus });
+    showToast('تم تحديث حالة المستخدم', 'success');
+    loadUsers();
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
+// ============ WILAYAS ============
+async function loadWilayas() {
+  try {
+    wilayas = await apiCall('/api/wilayas');
+    const select = document.getElementById('orderWilaya');
+    select.innerHTML = '<option value="">اختر الولاية</option>' +
+      wilayas.map(w => `<option value="${w.id}">${w.code} - ${w.name_ar}</option>`).join('');
+  } catch (err) {
+    console.error('Load wilayas error:', err);
+  }
+}
+
+// ============ MODALS ============
+function openNewOrderModal() {
+  document.getElementById('newOrderModal').classList.remove('hidden');
+  if (document.querySelectorAll('.order-item-row').length === 0) {
+    addProductRow();
+  }
+}
+
+function openNewProductModal() {
+  document.getElementById('newProductModal').classList.remove('hidden');
+}
+
+function openNewUserModal() {
+  document.getElementById('newUserModal').classList.remove('hidden');
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.add('hidden');
+}
+
+// ============ UTILITIES ============
+function formatMoney(amount) {
+  return new Intl.NumberFormat('ar-DZ', { 
+    style: 'decimal', 
+    minimumFractionDigits: 0 
+  }).format(amount || 0) + ' دج';
+}
+
+function getStatusLabel(status) {
+  const labels = {
+    new: 'جديدة', confirmed: 'مؤكدة', cancelled: 'ملغاة',
+    no_answer: 'لا يجيب', callback: 'إعادة اتصال', shipped: 'تم الشحن',
+    delivered: 'تم التوصيل', returned: 'مرتجعة', duplicate: 'مكررة', exchange: 'استبدال'
+  };
+  return labels[status] || status;
+}
+
+function getRoleLabel(role) {
+  const labels = { admin: 'مدير', supervisor: 'مشرف', agent: 'عامل تأكيد' };
+  return labels[role] || role;
+}
+
+function showToast(message, type = 'success') {
+  const toast = document.getElementById('toast');
+  const icon = document.getElementById('toastIcon');
+  const msg = document.getElementById('toastMessage');
+  
+  msg.textContent = message;
+  icon.className = type === 'success' ? 'fas fa-check-circle text-green-500' :
+                   type === 'error' ? 'fas fa-exclamation-circle text-red-500' :
+                   'fas fa-exclamation-triangle text-yellow-500';
+  
+  toast.classList.remove('hidden');
+  setTimeout(() => toast.classList.add('hidden'), 4000);
+}
+
+function logout() {
+  localStorage.clear();
+  window.location.href = '/';
+}
+</script>
+
 </body>
-</html>
+            </html>
