@@ -18,7 +18,6 @@ const pool = new Pool({
 
 async function initDB() {
     try {
-        // جدول الطلبيات يبقى كما هو وما يتمسحش
         await pool.query(`
             CREATE TABLE IF NOT EXISTS orders (
                 id SERIAL PRIMARY KEY,
@@ -35,10 +34,8 @@ async function initDB() {
             )
         `);
 
-        // إعادة تهيئة جدول الإعدادات لتحديث كولونات كلمات السر
-        await pool.query(`DROP TABLE IF EXISTS settings`);
         await pool.query(`
-            CREATE TABLE settings (
+            CREATE TABLE IF NOT EXISTS settings (
                 id INTEGER PRIMARY KEY,
                 product_name TEXT DEFAULT 'Smart Watch Series 9',
                 price INTEGER DEFAULT 4500,
@@ -53,8 +50,11 @@ async function initDB() {
             )
         `);
 
-        await pool.query(`INSERT INTO settings (id) VALUES (1)`);
-        console.log("PostgreSQL Database Re-Initialized!");
+        const checkSettings = await pool.query('SELECT COUNT(*) FROM settings');
+        if (parseInt(checkSettings.rows[0].count) === 0) {
+            await pool.query(`INSERT INTO settings (id) VALUES (1)`);
+        }
+        console.log("Database initialized successfully!");
     } catch (err) {
         console.error("DB Init Error:", err);
     }
@@ -81,6 +81,10 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+app.get('/crm', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'crm.html'));
+});
+
 app.get('/api/settings', async (req, res) => {
     try {
         const result = await pool.query('SELECT * FROM settings WHERE id = 1');
@@ -103,13 +107,11 @@ app.put('/api/settings', async (req, res) => {
     }
 });
 
-// تسجيل الدخول مع دالة طوارئ لضمان قبول كلمة السر
 app.post('/api/login', async (req, res) => {
     const { password } = req.body;
     try {
         const result = await pool.query('SELECT * FROM settings WHERE id = 1');
         const s = result.rows[0] || {};
-        
         const adminPass = s.admin_pass || 'admin123';
         const agentPass = s.agent_pass || 'agent123';
 
@@ -128,28 +130,26 @@ app.post('/api/login', async (req, res) => {
 });
 
 app.post('/api/orders', async (req, res) => {
-    const { name, phone, wilaya, commune, product_name, price, quantity, status } = req.body;
+    const { name, phone, wilaya, commune, product, quantity, price, status } = req.body;
     try {
         const setRes = await pool.query('SELECT * FROM settings WHERE id = 1');
-        const settings = setRes.rows[0] || {};
-        
-        const orderStatus = status || 'جديد';
-        const prodName = product_name || 'منتج';
-        const orderPrice = price || 4500;
+        const settings = setRes.rows[0];
+
+        const finalProduct = product || settings.product_name;
+        const finalPrice = price || settings.price;
+        const finalQuantity = quantity || 1;
+        const finalStatus = status || 'جديد';
+        const finalCommune = commune || '---';
 
         const insertRes = await pool.query(
             `INSERT INTO orders (name, phone, wilaya, commune, product, quantity, price, status) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
-            [name, phone, wilaya, commune || 'مكتوب يدوياً', prodName, quantity || 1, orderPrice, orderStatus]
+            [name, phone, wilaya, finalCommune, finalProduct, finalQuantity, finalPrice, finalStatus]
         );
 
-        sendTelegramNotification({ name, phone, wilaya, commune: commune || '', product: prodName, price: orderPrice }, settings);
-        res.json({ success: true, orderId: insertRes.rows[0].id });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
+        if (!product) {
+            sendTelegramNotification({ name, phone, wilaya, commune: finalCommune, product: finalProduct, price: finalPrice }, settings);
+        }
 
-        sendTelegramNotification({ name, phone, wilaya, commune, product: settings.product_name, price: settings.price }, settings);
         res.json({ success: true, orderId: insertRes.rows[0].id });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -178,7 +178,7 @@ app.put('/api/orders/:id', async (req, res) => {
 
 app.get('/api/export-csv', async (req, res) => {
     try {
-        const result = await pool.query('SELECT * FROM orders WHERE status = \'مؤكد\'');
+        const result = await pool.query("SELECT * FROM orders WHERE status = 'مؤكد'");
         let csv = '\uFEFF';
         csv += 'رقم الطلب,الاسم,الهاتف,الولاية,البلدية,المنتج,الكمية,السعر الإجمالي\n';
         result.rows.forEach(r => {
