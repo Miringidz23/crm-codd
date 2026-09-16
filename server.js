@@ -389,6 +389,57 @@ app.put('/api/users/:id', authenticateToken, requireRole('admin'), async (req, r
   }
 });
 
+// تحديث حالة المستخدم (تفعيل / تعطيل)
+app.patch('/api/users/:id/toggle', authenticateToken, requireRole('admin'), async (req, res) => {
+  try {
+    const { is_active } = req.body;
+    const userId = req.params.id;
+
+    if (parseInt(userId) === req.user.id) {
+      return res.status(400).json({ error: 'لا يمكنك تعطيل حسابك الخاص' });
+    }
+
+    const result = await pool.query(
+      'UPDATE users SET is_active = $1, updated_at = NOW() WHERE id = $2 RETURNING id, username, is_active',
+      [is_active, userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'المستخدم غير موجود' });
+    }
+
+    res.json({ message: 'تم تحديث حالة المستخدم بنجاح', user: result.rows[0] });
+  } catch (err) {
+    console.error('Toggle user error:', err);
+    res.status(500).json({ error: 'خطأ في تحديث حالة المستخدم' });
+  }
+});
+
+// حذف مستخدم نهائياً
+app.delete('/api/users/:id', authenticateToken, requireRole('admin'), async (req, res) => {
+  try {
+    const userId = parseInt(req.params.id);
+
+    if (userId === req.user.id) {
+      return res.status(400).json({ error: 'لا يمكنك حذف حسابك الخاص' });
+    }
+
+    const target = await pool.query('SELECT username FROM users WHERE id = $1', [userId]);
+    if (target.rows.length === 0) {
+      return res.status(404).json({ error: 'المستخدم غير موجود' });
+    }
+    if (target.rows[0].username === 'admin') {
+      return res.status(400).json({ error: 'لا يمكن حذف حساب المدير الرئيسي' });
+    }
+
+    await pool.query('DELETE FROM users WHERE id = $1', [userId]);
+    res.json({ message: 'تم حذف المستخدم بنجاح' });
+  } catch (err) {
+    console.error('Delete user error:', err);
+    res.status(500).json({ error: 'خطأ في حذف المستخدم' });
+  }
+});
+
 // ======================== PRODUCTS MANAGEMENT ========================
 
 // جلب جميع المنتجات
