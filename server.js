@@ -35,7 +35,6 @@ async function initDatabase() {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-     await client.query(`DROP TABLE IF EXISTS order_history, order_items, orders, products, wilayas, users, settings CASCADE;`);
     // -------- جدول المستخدمين --------
     await client.query(`
       CREATE TABLE IF NOT EXISTS users (
