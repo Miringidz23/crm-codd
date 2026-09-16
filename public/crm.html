@@ -7,7 +7,6 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <!-- مكتبة توليد الباركود للوصل -->
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
   <style>
     * { font-family: 'Tajawal', sans-serif; }
@@ -61,7 +60,7 @@
 
     .badge { padding: 2px 10px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; }
     
-    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: #0f172a; }
     ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
     ::-webkit-scrollbar-thumb:hover { background: #475569; }
@@ -76,9 +75,12 @@
 </head>
 <body class="min-h-screen">
 
+<!-- Sidebar Overlay for Mobile -->
+<div id="sidebarOverlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/60 z-40 hidden md:hidden"></div>
+
 <!-- =================== SIDEBAR =================== -->
-<div class="fixed right-0 top-0 h-full w-64 sidebar z-50 flex flex-col" id="sidebar">
-  <div class="p-5 border-b border-gray-700">
+<div class="fixed right-0 top-0 h-full w-64 sidebar z-50 flex flex-col transition-transform duration-300 md:translate-x-0 translate-x-full" id="sidebar">
+  <div class="p-5 border-b border-gray-700 flex items-center justify-between">
     <div class="flex items-center gap-3">
       <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
         <i class="fas fa-box text-white"></i>
@@ -88,9 +90,12 @@
         <p class="text-xs text-gray-400">نظام إدارة الطلبيات</p>
       </div>
     </div>
+    <button onclick="toggleSidebar()" class="md:hidden text-gray-400 hover:text-white">
+      <i class="fas fa-times text-xl"></i>
+    </button>
   </div>
 
-  <nav class="flex-1 p-3 space-y-1">
+  <nav class="flex-1 p-3 space-y-1 overflow-y-auto">
     <a href="#" onclick="showSection('dashboard')" class="sidebar-item active flex items-center gap-3 px-4 py-3 rounded-xl text-sm" data-section="dashboard">
       <i class="fas fa-chart-pie w-5"></i> لوحة التحكم
     </a>
@@ -123,17 +128,22 @@
 </div>
 
 <!-- =================== MAIN CONTENT =================== -->
-<div class="mr-64 min-h-screen">
+<div class="md:mr-64 mr-0 min-h-screen transition-all duration-300">
 
-  <div class="sticky top-0 z-40 bg-slate-900/95 backdrop-blur border-b border-gray-700 px-6 py-3">
+  <div class="sticky top-0 z-30 bg-slate-900/95 backdrop-blur border-b border-gray-700 px-4 md:px-6 py-3">
     <div class="flex items-center justify-between">
-      <div>
-        <h2 class="text-xl font-bold" id="sectionTitle">لوحة التحكم</h2>
-        <p class="text-xs text-gray-400" id="currentDate"></p>
+      <div class="flex items-center gap-3">
+        <button onclick="toggleSidebar()" class="md:hidden bg-slate-800 p-2 rounded-lg text-white">
+          <i class="fas fa-bars text-lg"></i>
+        </button>
+        <div>
+          <h2 class="text-lg md:text-xl font-bold" id="sectionTitle">لوحة التحكم</h2>
+          <p class="text-xs text-gray-400 hidden sm:block" id="currentDate"></p>
+        </div>
       </div>
       <div class="flex items-center gap-3">
         <button onclick="loadDashboard()" class="bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded-lg text-sm transition-colors">
-          <i class="fas fa-sync-alt ml-1"></i> تحديث
+          <i class="fas fa-sync-alt ml-1"></i> <span class="hidden sm:inline">تحديث</span>
         </button>
         <div class="w-3 h-3 bg-green-500 rounded-full pulse-dot" title="متصل"></div>
       </div>
@@ -141,8 +151,8 @@
   </div>
 
   <!-- DASHBOARD SECTION -->
-  <div id="section-dashboard" class="p-6 space-y-6">
-    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4" id="statsGrid"></div>
+  <div id="section-dashboard" class="p-4 md:p-6 space-y-6">
+    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 md:gap-4" id="statsGrid"></div>
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <div class="stat-card rounded-2xl p-5">
         <h3 class="text-lg font-bold mb-4"><i class="fas fa-trophy text-yellow-500 ml-2"></i>أداء العمال اليوم</h3>
@@ -160,21 +170,21 @@
   </div>
 
   <!-- ORDERS SECTION -->
-  <div id="section-orders" class="p-6 space-y-4 hidden">
-    <div class="flex flex-wrap items-center gap-3">
-      <button onclick="openNewOrderModal()" class="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-5 py-2.5 rounded-xl font-medium transition-all">
-        <i class="fas fa-plus ml-2"></i>طلبية جديدة
+  <div id="section-orders" class="p-4 md:p-6 space-y-4 hidden">
+    <div class="flex flex-wrap items-center gap-2 md:gap-3">
+      <button onclick="openNewOrderModal()" class="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-4 py-2 md:px-5 md:py-2.5 rounded-xl font-medium text-sm md:text-base transition-all">
+        <i class="fas fa-plus ml-1 md:ml-2"></i>طلبية جديدة
       </button>
-      <button onclick="printSelectedBordereaux()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl font-medium transition-all">
-        <i class="fas fa-print ml-2"></i>طباعة المحدد (Bulk)
+      <button onclick="printSelectedBordereaux()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 md:px-4 md:py-2.5 rounded-xl font-medium text-xs md:text-sm transition-all">
+        <i class="fas fa-print ml-1"></i>طباعة (Bulk)
       </button>
-      <button onclick="autoAssignOrders()" class="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2.5 rounded-xl font-medium transition-all admin-only">
-        <i class="fas fa-wand-magic-sparkles ml-2"></i>توزيع تلقائي
+      <button onclick="autoAssignOrders()" class="bg-amber-600 hover:bg-amber-700 text-white px-3 py-2 md:px-4 md:py-2.5 rounded-xl font-medium text-xs md:text-sm transition-all admin-only">
+        <i class="fas fa-wand-magic-sparkles ml-1"></i>توزيع تلقائي
       </button>
       
       <div class="flex-1"></div>
       
-      <select id="filterStatus" onchange="loadOrders()" class="input-field rounded-xl px-4 py-2.5 text-sm">
+      <select id="filterStatus" onchange="loadOrders()" class="input-field rounded-xl px-3 py-2 text-xs md:text-sm">
         <option value="">جميع الحالات</option>
         <option value="new">جديدة</option>
         <option value="confirmed">مؤكدة</option>
@@ -186,12 +196,12 @@
         <option value="returned">مرتجعة</option>
       </select>
       
-      <input type="text" id="searchOrders" placeholder="بحث بالاسم أو الهاتف..." onkeyup="debounceSearch()" class="input-field rounded-xl px-4 py-2.5 text-sm w-64">
+      <input type="text" id="searchOrders" placeholder="بحث بالاسم أو الهاتف..." onkeyup="debounceSearch()" class="input-field rounded-xl px-3 py-2 text-xs md:text-sm w-full sm:w-48 md:w-64">
     </div>
 
     <div class="stat-card rounded-2xl overflow-hidden">
       <div class="overflow-x-auto">
-        <table class="w-full text-sm">
+        <table class="w-full text-sm min-w-[700px]">
           <thead>
             <tr class="bg-slate-800/50 text-gray-400">
               <th class="px-4 py-3 text-right"><input type="checkbox" id="selectAll" onchange="toggleSelectAll()" class="rounded"></th>
@@ -218,7 +228,7 @@
   </div>
 
   <!-- PRODUCTS SECTION -->
-  <div id="section-products" class="p-6 space-y-4 hidden">
+  <div id="section-products" class="p-4 md:p-6 space-y-4 hidden">
     <div class="flex items-center gap-3 mb-4">
       <button onclick="openNewProductModal()" class="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-5 py-2.5 rounded-xl font-medium transition-all">
         <i class="fas fa-plus ml-2"></i>منتج جديد
@@ -228,29 +238,32 @@
   </div>
 
   <!-- USERS SECTION -->
-  <div id="section-users" class="p-6 space-y-4 hidden">
+  <div id="section-users" class="p-4 md:p-6 space-y-4 hidden">
     <div class="flex items-center gap-3 mb-4">
       <button onclick="openNewUserModal()" class="bg-gradient-to-r from-purple-500 to-pink-600 text-white px-5 py-2.5 rounded-xl font-medium transition-all">
         <i class="fas fa-user-plus ml-2"></i>مستخدم جديد
       </button>
     </div>
     <div class="stat-card rounded-2xl overflow-hidden">
-      <table class="w-full text-sm">
-        <thead>
-          <tr class="bg-slate-800/50 text-gray-400">
-            <th class="px-4 py-3 text-right">الاسم</th>
-            <th class="px-4 py-3 text-right">اسم المستخدم</th>
-            <th class="px-4 py-3 text-right">الدور</th>
-            <th class="px-4 py-3 text-right">الهاتف</th>
-            <th class="px-4 py-3 text-right">الحد اليومي</th>
-            <th class="px-4 py-3 text-right">طلبيات معلقة</th>
-            <th class="px-4 py-3 text-right">مؤكدة اليوم</th>
-            <th class="px-4 py-3 text-right">الحالة</th>
-            <th class="px-4 py-3 text-center">إجراءات</th>
-          </tr>
-        </thead>
-        <tbody id="usersTableBody"></tbody>
-      </table>
+      <!-- 🔴 تحسين عرض الجدول للهاتف هنا -->
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm min-w-[650px]">
+          <thead>
+            <tr class="bg-slate-800/50 text-gray-400">
+              <th class="px-4 py-3 text-right">الاسم</th>
+              <th class="px-4 py-3 text-right">اسم المستخدم</th>
+              <th class="px-4 py-3 text-right">الدور</th>
+              <th class="px-4 py-3 text-right">الهاتف</th>
+              <th class="px-4 py-3 text-right">الحد اليومي</th>
+              <th class="px-4 py-3 text-right">طلبيات معلقة</th>
+              <th class="px-4 py-3 text-right">مؤكدة اليوم</th>
+              <th class="px-4 py-3 text-right">الحالة</th>
+              <th class="px-4 py-3 text-center">إجراءات</th>
+            </tr>
+          </thead>
+          <tbody id="usersTableBody"></tbody>
+        </table>
+      </div>
     </div>
   </div>
 
@@ -261,40 +274,40 @@
 <!-- New Order Modal -->
 <div id="newOrderModal" class="fixed inset-0 z-50 hidden">
   <div class="modal-overlay absolute inset-0" onclick="closeModal('newOrderModal')"></div>
-  <div class="relative z-10 flex items-start justify-center pt-10 px-4 min-h-screen">
-    <div class="modal-content rounded-2xl w-full max-w-3xl p-6">
-      <div class="flex items-center justify-between mb-6">
-        <h3 class="text-xl font-bold"><i class="fas fa-plus-circle text-blue-500 ml-2"></i>طلبية جديدة</h3>
+  <div class="relative z-10 flex items-start justify-center pt-5 md:pt-10 px-3 md:px-4 min-h-screen">
+    <div class="modal-content rounded-2xl w-full max-w-3xl p-4 md:p-6">
+      <div class="flex items-center justify-between mb-4 md:mb-6">
+        <h3 class="text-lg md:text-xl font-bold"><i class="fas fa-plus-circle text-blue-500 ml-2"></i>طلبية جديدة</h3>
         <button onclick="closeModal('newOrderModal')" class="text-gray-400 hover:text-white"><i class="fas fa-times text-xl"></i></button>
       </div>
 
       <form id="newOrderForm" onsubmit="createOrder(event)" class="space-y-4">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
           <div>
             <label class="block text-sm font-medium text-gray-300 mb-1">اسم العميل *</label>
-            <input type="text" name="customer_name" required class="input-field w-full rounded-xl px-4 py-2.5">
+            <input type="text" name="customer_name" required class="input-field w-full rounded-xl px-4 py-2.5 text-sm">
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-300 mb-1">رقم الهاتف *</label>
-            <input type="tel" name="customer_phone" required class="input-field w-full rounded-xl px-4 py-2.5" placeholder="05XXXXXXXX">
+            <input type="tel" name="customer_phone" required class="input-field w-full rounded-xl px-4 py-2.5 text-sm" placeholder="05XXXXXXXX">
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-300 mb-1">هاتف ثاني</label>
-            <input type="tel" name="customer_phone2" class="input-field w-full rounded-xl px-4 py-2.5">
+            <input type="tel" name="customer_phone2" class="input-field w-full rounded-xl px-4 py-2.5 text-sm">
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-300 mb-1">الولاية *</label>
-            <select name="wilaya_id" required class="input-field w-full rounded-xl px-4 py-2.5" id="orderWilaya" onchange="updateDeliveryCost()">
+            <select name="wilaya_id" required class="input-field w-full rounded-xl px-4 py-2.5 text-sm" id="orderWilaya" onchange="updateDeliveryCost()">
               <option value="">اختر الولاية</option>
             </select>
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-300 mb-1">البلدية</label>
-            <input type="text" name="commune" class="input-field w-full rounded-xl px-4 py-2.5">
+            <input type="text" name="commune" class="input-field w-full rounded-xl px-4 py-2.5 text-sm">
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-300 mb-1">نوع التوصيل</label>
-            <select name="delivery_type" class="input-field w-full rounded-xl px-4 py-2.5" onchange="updateDeliveryCost()">
+            <select name="delivery_type" class="input-field w-full rounded-xl px-4 py-2.5 text-sm" onchange="updateDeliveryCost()">
               <option value="desk">مكتب (Bureau)</option>
               <option value="home">منزل (Domicile)</option>
             </select>
@@ -303,33 +316,33 @@
 
         <div>
           <label class="block text-sm font-medium text-gray-300 mb-1">العنوان</label>
-          <input type="text" name="address" class="input-field w-full rounded-xl px-4 py-2.5">
+          <input type="text" name="address" class="input-field w-full rounded-xl px-4 py-2.5 text-sm">
         </div>
 
-        <div class="border border-gray-600 rounded-xl p-4">
+        <div class="border border-gray-600 rounded-xl p-3 md:p-4">
           <div class="flex items-center justify-between mb-3">
-            <h4 class="font-bold text-blue-400"><i class="fas fa-boxes-stacked ml-2"></i>المنتجات</h4>
-            <button type="button" onclick="addProductRow()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-sm">
+            <h4 class="font-bold text-blue-400 text-sm md:text-base"><i class="fas fa-boxes-stacked ml-2"></i>المنتجات</h4>
+            <button type="button" onclick="addProductRow()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs md:text-sm">
               <i class="fas fa-plus ml-1"></i>إضافة منتج
             </button>
           </div>
           <div id="orderItemsContainer" class="space-y-3"></div>
-          <div class="mt-4 pt-3 border-t border-gray-600 flex justify-between items-center">
+          <div class="mt-4 pt-3 border-t border-gray-600 flex justify-between items-center text-sm md:text-base">
             <span class="text-gray-400">تكلفة التوصيل: <strong class="text-white" id="deliveryCostDisplay">0 دج</strong></span>
-            <span class="text-lg font-bold">المجموع: <strong class="text-green-400" id="orderTotalDisplay">0 دج</strong></span>
+            <span class="font-bold">المجموع: <strong class="text-green-400" id="orderTotalDisplay">0 دج</strong></span>
           </div>
         </div>
 
         <div>
           <label class="block text-sm font-medium text-gray-300 mb-1">ملاحظات</label>
-          <textarea name="notes" rows="2" class="input-field w-full rounded-xl px-4 py-2.5"></textarea>
+          <textarea name="notes" rows="2" class="input-field w-full rounded-xl px-4 py-2.5 text-sm"></textarea>
         </div>
 
         <div class="flex gap-3 pt-2">
-          <button type="submit" class="flex-1 bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 rounded-xl font-bold text-lg hover:from-blue-600 hover:to-purple-700 transition-all">
+          <button type="submit" class="flex-1 bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 rounded-xl font-bold text-base md:text-lg hover:from-blue-600 hover:to-purple-700 transition-all">
             <i class="fas fa-save ml-2"></i>حفظ الطلبية
           </button>
-          <button type="button" onclick="closeModal('newOrderModal')" class="px-6 py-3 bg-gray-700 hover:bg-gray-600 rounded-xl font-medium transition-colors">إلغاء</button>
+          <button type="button" onclick="closeModal('newOrderModal')" class="px-4 md:px-6 py-3 bg-gray-700 hover:bg-gray-600 rounded-xl font-medium transition-colors text-sm md:text-base">إلغاء</button>
         </div>
       </form>
     </div>
@@ -511,6 +524,13 @@ document.addEventListener('DOMContentLoaded', () => {
   loadDashboard();
 });
 
+function toggleSidebar() {
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('sidebarOverlay');
+  sidebar.classList.toggle('translate-x-full');
+  overlay.classList.toggle('hidden');
+}
+
 async function apiCall(url, method = 'GET', body = null) {
   const options = {
     method,
@@ -549,6 +569,16 @@ function showSection(section) {
   };
   document.getElementById('sectionTitle').textContent = titles[section];
 
+  // Close sidebar on mobile after clicking
+  if (window.innerWidth < 768) {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+    if (!sidebar.classList.contains('translate-x-full')) {
+      sidebar.classList.add('translate-x-full');
+      overlay.classList.add('hidden');
+    }
+  }
+
   if (section === 'orders') loadOrders();
   if (section === 'products') loadProducts();
   if (section === 'users') loadUsers();
@@ -576,12 +606,12 @@ function renderDashboardStats(data) {
   ];
 
   document.getElementById('statsGrid').innerHTML = statsCards.map(s => `
-    <div class="stat-card rounded-2xl p-4 bg-gradient-to-br ${s.bg}">
+    <div class="stat-card rounded-2xl p-3 md:p-4 bg-gradient-to-br ${s.bg}">
       <div class="flex items-center justify-between mb-2">
-        <i class="fas ${s.icon} text-2xl opacity-80"></i>
-        <span class="text-3xl font-extrabold">${s.value || 0}</span>
+        <i class="fas ${s.icon} text-xl md:text-2xl opacity-80"></i>
+        <span class="text-2xl md:text-3xl font-extrabold">${s.value || 0}</span>
       </div>
-      <p class="text-sm opacity-80">${s.label}</p>
+      <p class="text-xs md:text-sm opacity-80">${s.label}</p>
     </div>
   `).join('');
 
@@ -632,20 +662,20 @@ function renderDashboardStats(data) {
 
   const o = data.overall;
   document.getElementById('overallStats').innerHTML = `
-    <div class="bg-slate-800/50 rounded-xl p-4 text-center">
-      <p class="text-2xl font-bold text-blue-400">${o.total_orders || 0}</p>
+    <div class="bg-slate-800/50 rounded-xl p-3 md:p-4 text-center">
+      <p class="text-xl md:text-2xl font-bold text-blue-400">${o.total_orders || 0}</p>
       <p class="text-xs text-gray-400 mt-1">إجمالي الطلبيات</p>
     </div>
-    <div class="bg-slate-800/50 rounded-xl p-4 text-center">
-      <p class="text-2xl font-bold text-green-400">${o.confirmation_rate || 0}%</p>
+    <div class="bg-slate-800/50 rounded-xl p-3 md:p-4 text-center">
+      <p class="text-xl md:text-2xl font-bold text-green-400">${o.confirmation_rate || 0}%</p>
       <p class="text-xs text-gray-400 mt-1">نسبة التأكيد</p>
     </div>
-    <div class="bg-slate-800/50 rounded-xl p-4 text-center">
-      <p class="text-2xl font-bold text-red-400">${o.return_rate || 0}%</p>
+    <div class="bg-slate-800/50 rounded-xl p-3 md:p-4 text-center">
+      <p class="text-xl md:text-2xl font-bold text-red-400">${o.return_rate || 0}%</p>
       <p class="text-xs text-gray-400 mt-1">نسبة المرتجعات</p>
     </div>
-    <div class="bg-slate-800/50 rounded-xl p-4 text-center">
-      <p class="text-2xl font-bold text-emerald-400">${formatMoney(o.total_revenue)}</p>
+    <div class="bg-slate-800/50 rounded-xl p-3 md:p-4 text-center">
+      <p class="text-xl md:text-2xl font-bold text-emerald-400">${formatMoney(o.total_revenue)}</p>
       <p class="text-xs text-gray-400 mt-1">إجمالي الإيرادات</p>
     </div>
   `;
@@ -773,7 +803,7 @@ async function createOrder(e) {
 function addProductRow() {
   const container = document.getElementById('orderItemsContainer');
   const row = document.createElement('div');
-  row.className = 'order-item-row flex items-center gap-3 bg-slate-800/50 rounded-xl p-3';
+  row.className = 'order-item-row flex items-center gap-2 md:gap-3 bg-slate-800/50 rounded-xl p-2 md:p-3';
   
   const productOptions = products
     .filter(p => p.is_active)
@@ -781,12 +811,12 @@ function addProductRow() {
     .join('');
 
   row.innerHTML = `
-    <select class="item-product input-field rounded-lg px-3 py-2 flex-1 text-sm" onchange="updateItemTotal(this)">
+    <select class="item-product input-field rounded-lg px-2 md:px-3 py-1.5 md:py-2 flex-1 text-xs md:text-sm" onchange="updateItemTotal(this)">
       <option value="">اختر المنتج</option>
       ${productOptions}
     </select>
-    <input type="number" class="item-quantity input-field rounded-lg px-3 py-2 w-20 text-center text-sm" value="1" min="1" onchange="updateItemTotal(this)" onkeyup="updateItemTotal(this)">
-    <span class="item-total text-green-400 font-bold text-sm w-28 text-left">0 دج</span>
+    <input type="number" class="item-quantity input-field rounded-lg px-2 py-1.5 md:py-2 w-16 md:w-20 text-center text-xs md:text-sm" value="1" min="1" onchange="updateItemTotal(this)" onkeyup="updateItemTotal(this)">
+    <span class="item-total text-green-400 font-bold text-xs md:text-sm w-20 md:w-28 text-left">0 دج</span>
     <button type="button" onclick="this.closest('.order-item-row').remove(); updateOrderTotal()" class="text-red-400 hover:text-red-300 p-1"><i class="fas fa-trash text-sm"></i></button>
   `;
   container.appendChild(row);
@@ -946,6 +976,7 @@ async function loadUsers() {
   }
 }
 
+// 🔴 عرض المستخدمين المحدث (تفعيل/تعطيل وحذف)
 function renderUsers(users) {
   document.getElementById('usersTableBody').innerHTML = users.map(u => `
     <tr class="table-row border-b border-gray-800">
@@ -961,10 +992,45 @@ function renderUsers(users) {
         ${u.is_active ? 'نشط' : 'معطل'}
       </td>
       <td class="px-4 py-3 text-center">
-        <button onclick="toggleUserStatus(${u.id}, ${!u.is_active})" class="text-sm ${u.is_active ? 'text-red-400' : 'text-green-400'}"><i class="fas ${u.is_active ? 'fa-ban' : 'fa-check-circle'}"></i></button>
+        <div class="flex items-center justify-center gap-2">
+          <!-- زر التفعيل والتعطيل المصحح -->
+          <button onclick="toggleUserStatus(${u.id}, ${!u.is_active})" class="p-1 text-sm ${u.is_active ? 'text-yellow-400 hover:text-yellow-300' : 'text-green-400 hover:text-green-300'}" title="${u.is_active ? 'تعطيل' : 'تفعيل'}">
+            <i class="fas ${u.is_active ? 'fa-ban' : 'fa-check-circle'}"></i>
+          </button>
+          
+          <!-- زر الحذف -->
+          ${u.username !== 'admin' ? `
+            <button onclick="deleteUser(${u.id}, '${u.full_name}')" class="p-1 text-sm text-red-500 hover:text-red-400" title="حذف">
+              <i class="fas fa-trash"></i>
+            </button>
+          ` : ''}
+        </div>
       </td>
     </tr>
   `).join('');
+}
+
+// 🔴 دالة تفعيل وتغطيل المستخدم
+async function toggleUserStatus(userId, newStatus) {
+  try {
+    await apiCall(`/api/users/${userId}/toggle`, 'PATCH', { is_active: newStatus });
+    showToast('تم تحديث حالة المستخدم بنجاح', 'success');
+    loadUsers();
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
+// 🔴 دالة حذف المستخدم
+async function deleteUser(userId, fullName) {
+  if (!confirm(`هل أنت متأكد من حذف المستخدم "${fullName}" نهائياً؟`)) return;
+  try {
+    await apiCall(`/api/users/${userId}`, 'DELETE');
+    showToast('تم حذف المستخدم بنجاح', 'success');
+    loadUsers();
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
 }
 
 async function createUser(e) {
@@ -984,16 +1050,6 @@ async function createUser(e) {
     closeModal('newUserModal');
     form.reset();
     showToast('تم إنشاء الحساب بنجاح', 'success');
-    loadUsers();
-  } catch (err) {
-    showToast(err.message, 'error');
-  }
-}
-
-async function toggleUserStatus(userId, newStatus) {
-  try {
-    await apiCall(`/api/users/${userId}`, 'PUT', { is_active: newStatus });
-    showToast('تم تحديث حالة المستخدم', 'success');
     loadUsers();
   } catch (err) {
     showToast(err.message, 'error');
@@ -1054,7 +1110,7 @@ function logout() {
   window.location.href = '/';
 }
 
-// ============ PRINT BORDEREAU ENGINE (MOBILE READY) ============
+// ============ PRINT BORDEREAU ENGINE ============
 async function printSingleBordereau(orderId) {
   try {
     showToast('جاري تحضير الوصل...', 'warning');
@@ -1172,4 +1228,4 @@ function openPrintWindow(ordersList) {
 }
 </script>
 </body>
-  </html>
+          </html>
