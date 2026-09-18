@@ -1058,7 +1058,145 @@ app.get('/api/orders/:id/history', authenticateToken, async (req, res) => {
     res.status(500).json({ error: 'خطأ في جلب السجل' });
   }
 });
+// ============================================================
+//  PUBLIC APIS FOR LANDING PAGE (بدون مصادقة للزبائن)
+// ============================================================
 
+// جلب الولايات والتكاليف لصفحة الهبوط
+app.get('/api/public/wilayas', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM wilayas ORDER BY code::int');
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: 'خطأ في جلب الولايات' });
+  }
+});
+
+// جلب المنتجات النشطة لصفحة الهبوط
+app.get('/api/public/products', async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT id, name, sku, sale_price, stock_quantity, image_url, description FROM products WHERE is_active = true'
+    );
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: 'خطأ في جلب المنتجات' });
+  }
+});
+
+// إرسال طلبية من صفحة الهبوط مباشرة للـ CRM
+app.post('/api/public/orders', async (req, res) => {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const {
+      customer_name, customer_phone, customer_phone2,
+      wilaya_id, commune, address, delivery_type,
+      product_id, quantity, notes
+    } = req.body;
+
+    if (!customer_name || !customer_phone || !wilaya_id || !product_id) {
+      return res.status(400).json({ error: 'الرجاء إكمال جميع الحقول الإجبارية' });
+    }
+
+    // كشف التكرار (نفس الهاتف في آخر 24 ساعة)
+    const duplicateCheck = await client.query(
+      `SELECT id, tracking_id FROM orders 
+       WHERE customer_phone = $1 AND created_at > NOW() - INTERVAL '24 hours'
+       AND status NOT IN ('cancelled', 'returned')`,
+      [customer_phone]
+    );
+
+    let isDuplicate = duplicateCheck.rows.length > 0;
+
+    // جلب تكاليف التوصيل
+    const wilaya = await client.query('SELECT * FROM wilayas WHERE id = $1', [wilaya_id]);
+    if (wilaya.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'الولاية غير موجودة' });
+    }
+
+    const delivery_cost = delivery_type === 'home' 
+      ? parseFloat(wilaya.rows[0].delivery_cost_home) 
+      : parseFloat(wilaya.rows[0].delivery_cost_desk);
+
+    // جلب المنتج
+    const product = await client.query('SELECT * FROM products WHERE id = $1 AND is_active = true', [product_id]);
+    if (product.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'المنتج غير متوفر حالياً' });
+    }
+
+    const p = product.rows[0];
+    const qty = parseInt(quantity) || 1;
+    const totalAmount = parseFloat(p.sale_price) * qty;
+
+    // التوزيع التلقائي على العمال (Round Robin)
+    const agents = await client.query(
+      `SELECT id FROM (
+         SELECT u.id, u.max_daily_orders,
+                (SELECT COUNT(*) FROM orders WHERE assigned_to = u.id 
+                 AND DATE(created_at) = CURRENT_DATE AND status = 'new') as today_count
+         FROM users u 
+         WHERE u.role = 'agent' AND u.is_active = true
+       ) agent_stats
+       WHERE today_count < max_daily_orders
+       ORDER BY today_count ASC
+       LIMIT 1`
+    );
+
+    const assignedTo = agents.rows.length > 0 ? agents.rows[0].id : null;
+    const trackingId = 'DZ' + Date.now().toString().slice(-6) + Math.random().toString(36).substring(2, 5).toUpperCase();
+
+    // إدخال الطلبية
+    const orderResult = await client.query(
+      `INSERT INTO orders (tracking_id, customer_name, customer_phone, customer_phone2,
+       wilaya_id, commune, address, delivery_type, status, total_amount, delivery_cost,
+       net_amount, assigned_to, notes, source)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,'Landing Page') RETURNING *`,
+      [trackingId, customer_name, customer_phone, customer_phone2,
+       wilaya_id, commune, address, delivery_type || 'desk',
+       isDuplicate ? 'duplicate' : 'new',
+       totalAmount, delivery_cost, totalAmount, assignedTo, notes]
+    );
+
+    const orderId = orderResult.rows[0].id;
+
+    // إدخال عنصر الطلبية وحجز المخزون
+    await client.query(
+      `INSERT INTO order_items (order_id, product_id, product_name, quantity, unit_price, total_price)
+       VALUES ($1,$2,$3,$4,$5,$6)`,
+      [orderId, p.id, p.name, qty, p.sale_price, totalAmount]
+    );
+
+    await client.query(
+      'UPDATE products SET reserved_quantity = reserved_quantity + $1, updated_at = NOW() WHERE id = $2',
+      [qty, p.id]
+    );
+
+    await client.query(
+      `INSERT INTO order_history (order_id, action, new_status, note)
+       VALUES ($1, 'created', $2, 'طلبية جديدة من صفحة الهبوط')`,
+      [orderId, isDuplicate ? 'duplicate' : 'new']
+    );
+
+    await client.query('COMMIT');
+
+    res.status(201).json({
+      success: true,
+      tracking_id: trackingId,
+      message: 'تم تسجيل طلبك بنجاح! سيتصل بك فريقنا لتأكيد الطلب.'
+    });
+
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Landing page order error:', err);
+    res.status(500).json({ error: 'حدث خطأ أثناء تسجيل الطلب، يرجى المحاولة لاحقاً' });
+  } finally {
+    client.release();
+  }
+});
 // ======================== ROUTES ========================
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
