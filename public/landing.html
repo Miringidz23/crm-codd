@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>العرض الخاص - اطلب الآن والدفع عند الاستلام</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    * { font-family: 'Tajawal', sans-serif; }
+    .pulse-btn {
+      animation: pulse-animation 2s infinite;
+    }
+    @keyframes pulse-animation {
+      0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
+      70% { box-shadow: 0 0 0 15px rgba(34, 197, 94, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+    }
+    .shake-icon { animation: shake 3s ease-in-out infinite; }
+    @keyframes shake {
+      0%, 100% { transform: rotate(0deg); }
+      10%, 30%, 50%, 70%, 90% { transform: rotate(-10deg); }
+      20%, 40%, 60%, 80% { transform: rotate(10deg); }
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 pb-20 md:pb-0">
+
+  <!-- Header Notification Bar -->
+  <div class="bg-red-600 text-white text-center py-2 px-4 text-xs md:text-sm font-bold flex items-center justify-center gap-2">
+    <i class="fas fa-fire shake-icon text-yellow-300"></i>
+    <span>عرض خاص وحصري! تخفيض 40% لفترة محدودة جداً + التوصيل متوفر لـ 58 ولاية</span>
+  </div>
+
+  <!-- Main Container -->
+  <div class="max-w-3xl mx-auto bg-white min-h-screen shadow-xl">
+
+    <!-- Navbar / Brand -->
+    <header class="p-4 border-b border-gray-100 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-green-500 to-emerald-700 flex items-center justify-center text-white font-black text-xl shadow-lg">
+          <i class="fas fa-shopping-bag"></i>
+        </div>
+        <span class="font-black text-xl text-slate-900">متجرنا الرسمي</span>
+      </div>
+      <div class="flex items-center gap-1 text-xs font-bold text-green-600 bg-green-50 px-3 py-1.5 rounded-full border border-green-200">
+        <i class="fas fa-shield-halved"></i> ضمان الجودة 100%
+      </div>
+    </header>
+
+    <!-- Product Title & Badge Section -->
+    <div class="p-4 md:p-6 text-center space-y-3">
+      <span class="inline-block bg-amber-100 text-amber-800 text-xs font-black px-3 py-1 rounded-full">
+        ⭐ الأكثر مبيعاً هذا الشهر في الجزائر
+      </span>
+      <h1 class="text-2xl md:text-3xl font-black text-slate-900 leading-snug" id="landingProductName">
+        جاري تحميل المنتج...
+      </h1>
+      <p class="text-gray-500 text-sm md:text-base" id="landingProductDesc">
+        منتج أصلـي ممتاز ومجرب بمواصفات عالية الجودة متوفر للطلب الحين!
+      </p>
+    </div>
+
+    <!-- Product Gallery / Image -->
+    <div class="px-4 md:px-6 relative">
+      <div class="relative rounded-2xl overflow-hidden shadow-2xl border border-gray-200 bg-gray-100 min-h-[250px] flex items-center justify-center">
+        <img id="productImage" src="https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800" 
+             alt="Product Image" class="w-full h-auto object-cover max-h-[400px]">
+        <div class="absolute top-3 right-3 bg-red-600 text-white font-black px-3 py-1 rounded-lg text-sm shadow-md">
+          تخفيض -40%
+        </div>
+      </div>
+    </div>
+
+    <!-- Price & Countdown Timer Bar -->
+    <div class="m-4 md:m-6 bg-gradient-to-r from-slate-900 to-slate-800 text-white p-4 md:p-6 rounded-2xl shadow-xl flex flex-col md:flex-row items-center justify-between gap-4">
+      <div class="text-center md:text-right">
+        <span class="text-xs text-gray-400 block font-medium">السعر بعد التخفيض:</span>
+        <div class="flex items-baseline gap-2">
+          <span class="text-3xl md:text-4xl font-black text-green-400" id="salePrice">0 دج</span>
+          <span class="text-sm md:text-base text-gray-400 line-through" id="oldPrice">0 دج</span>
+        </div>
+      </div>
+
+      <!-- Countdown -->
+      <div class="bg-white/10 p-3 rounded-xl border border-white/10 text-center w-full md:w-auto">
+        <span class="text-[10px] text-amber-300 font-bold block mb-1">⏳ ينتهي العرض الخاطف خلال:</span>
+        <div class="flex justify-center gap-2 font-mono font-black text-lg">
+          <div class="bg-black/40 px-2 py-1 rounded"><span id="hours">03</span><p class="text-[9px] text-gray-400 font-sans">ساعة</p></div>
+          <span>:</span>
+          <div class="bg-black/40 px-2 py-1 rounded"><span id="minutes">45</span><p class="text-[9px] text-gray-400 font-sans">دقيقة</p></div>
+          <span>:</span>
+          <div class="bg-black/40 px-2 py-1 rounded"><span id="seconds">12</span><p class="text-[9px] text-gray-400 font-sans">ثانية</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Features Badges Grid -->
+    <div class="grid grid-cols-3 gap-2 px-4 md:px-6 mb-6 text-center text-xs font-bold">
+      <div class="bg-blue-50 text-blue-800 p-3 rounded-xl border border-blue-100">
+        <i class="fas fa-truck-fast text-blue-600 text-xl block mb-1"></i>
+        توصيل سريع لـ 58 ولاية
+      </div>
+      <div class="bg-green-50 text-green-800 p-3 rounded-xl border border-green-100">
+        <i class="fas fa-hand-holding-dollar text-green-600 text-xl block mb-1"></i>
+        الدفع عند الاستلام (COD)
+      </div>
+      <div class="bg-amber-50 text-amber-800 p-3 rounded-xl border border-amber-100">
+        <i class="fas fa-box-open text-amber-600 text-xl block mb-1"></i>
+        افحص طردك قبل الدفع
+      </div>
+    </div>
+
+    <!-- ORDER FORM SECTION -->
+    <div id="orderFormSection" class="m-4 md:m-6 bg-slate-900 text-white p-5 md:p-8 rounded-3xl shadow-2xl border-2 border-green-500/50">
+      
+      <div class="text-center mb-6">
+        <h2 class="text-2xl md:text-3xl font-black text-green-400 mb-1">إستمارة الطلب السريع 📝</h2>
+        <p class="text-xs md:text-sm text-gray-300">أدخل معلوماتك أدناه وسنتصل بك فوراً للتأكيد قبل الشحن</p>
+      </div>
+
+      <form id="publicOrderForm" onsubmit="submitPublicOrder(event)" class="space-y-4">
+        
+        <!-- الاسم واللقب -->
+        <div>
+          <label class="block text-sm font-bold mb-1 text-gray-200">الاسم واللقب الكامل *</label>
+          <div class="relative">
+            <input type="text" name="customer_name" required placeholder="مثال: محمد بن علي"
+                   class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-green-500 text-sm">
+            <i class="fas fa-user absolute left-4 top-3.5 text-gray-500"></i>
+          </div>
+        </div>
+
+        <!-- رقم الهاتف -->
+        <div>
+          <label class="block text-sm font-bold mb-1 text-gray-200">رقم الهاتف *</label>
+          <div class="relative">
+            <input type="tel" name="customer_phone" required pattern="^(05|06|07)[0-9]{8}$" placeholder="06XXXXXXXX أو 07XXXXXXXX"
+                   class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-green-500 text-sm text-right dir-ltr">
+            <i class="fas fa-phone absolute left-4 top-3.5 text-gray-500"></i>
+          </div>
+        </div>
+
+        <!-- الولاية والبلدية -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-bold mb-1 text-gray-200">الولاية *</label>
+            <select name="wilaya_id" id="wilayaSelect" required onchange="calculateLandingTotal()"
+                    class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-green-500 text-sm">
+              <option value="">اختر الولاية (58 ولاية)</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-sm font-bold mb-1 text-gray-200">البلدية *</label>
+            <input type="text" name="commune" required placeholder="اسم البلدية"
+                   class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-green-500 text-sm">
+          </div>
+        </div>
+
+        <!-- نوع التوصيل -->
+        <div>
+          <label class="block text-sm font-bold mb-1 text-gray-200">مكان الاستلام *</label>
+          <div class="grid grid-cols-2 gap-3">
+            <label class="flex items-center gap-2 bg-slate-800 p-3 rounded-xl border border-slate-700 cursor-pointer hover:border-green-500">
+              <input type="radio" name="delivery_type" value="home" checked onchange="calculateLandingTotal()" class="accent-green-500">
+              <span class="text-xs md:text-sm font-bold">التوصيل للمنزل 🏠</span>
+            </label>
+            <label class="flex items-center gap-2 bg-slate-800 p-3 rounded-xl border border-slate-700 cursor-pointer hover:border-green-500">
+              <input type="radio" name="delivery_type" value="desk" onchange="calculateLandingTotal()" class="accent-green-500">
+              <span class="text-xs md:text-sm font-bold">استلام من المكتب 🏢</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- اختيار الكمية -->
+        <div>
+          <label class="block text-sm font-bold mb-1 text-gray-200">اختر العرض المناسب *</label>
+          <div class="space-y-2">
+            <label class="flex items-center justify-between bg-slate-800 p-3 rounded-xl border border-slate-700 cursor-pointer hover:border-green-500">
+              <div class="flex items-center gap-2">
+                <input type="radio" name="quantity" value="1" checked onchange="calculateLandingTotal()" class="accent-green-500">
+                <span class="text-sm font-bold">قطعة واحدة (1)</span>
+              </div>
+              <span class="text-xs text-green-400 font-bold">العرض القياسي</span>
+            </label>
+            
+            <label class="flex items-center justify-between bg-slate-800 p-3 rounded-xl border border-green-500/80 bg-green-950/20 cursor-pointer">
+              <div class="flex items-center gap-2">
+                <input type="radio" name="quantity" value="2" onchange="calculateLandingTotal()" class="accent-green-500">
+                <span class="text-sm font-bold">قطعتين (2)</span>
+              </div>
+              <span class="text-xs bg-green-500 text-black px-2 py-0.5 rounded font-black">🔥 توصيل مجاني</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- ملخص السعر والتوصيل -->
+        <div class="bg-slate-800/80 p-4 rounded-2xl border border-slate-700 space-y-2 text-sm">
+          <div class="flex justify-between text-gray-300">
+            <span>سعر المنتج:</span>
+            <span id="productPriceSummary" class="font-bold">0 دج</span>
+          </div>
+          <div class="flex justify-between text-gray-300">
+            <span>تكلفة التوصيل:</span>
+            <span id="deliveryCostSummary" class="font-bold text-amber-400">اختر الولاية</span>
+          </div>
+          <div class="border-t border-slate-700 pt-2 flex justify-between text-base font-black text-white">
+            <span>المبلغ الإجمالي عند الاستلام:</span>
+            <span id="grandTotalSummary" class="text-2xl text-green-400">0 دج</span>
+          </div>
+        </div>
+
+        <!-- Submit Button -->
+        <button type="submit" id="submitBtn"
+                class="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-slate-950 font-black py-4 px-6 rounded-2xl text-xl shadow-2xl transition-all pulse-btn flex items-center justify-center gap-3">
+          <i class="fas fa-check-circle text-2xl"></i>
+          <span>تأكيد الطلب الآن الدفع عند الاستلام</span>
+        </button>
+
+      </form>
+
+    </div>
+
+    <!-- Customer Reviews Section -->
+    <div class="p-6 bg-slate-100 rounded-3xl m-4 md:m-6">
+      <h3 class="text-xl font-black text-center text-slate-900 mb-4">آراء بعض زبائننا في الجزائر ⭐⭐⭐⭐⭐</h3>
+      <div class="space-y-3">
+        <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+          <div class="flex items-center justify-between mb-1">
+            <span class="font-bold text-sm">أحمد - الجزائر العاصمة</span>
+            <span class="text-amber-400 text-xs">⭐⭐⭐⭐⭐</span>
+          </div>
+          <p class="text-xs text-gray-600">وصلتني السلعة في يومين، نوعية ممتازة وطابق الصورة تماماً، شكراً لكم على الاحترافية.</p>
+        </div>
+
+        <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+          <div class="flex items-center justify-between mb-1">
+            <span class="font-bold text-sm">سارة - وهران</span>
+            <span class="text-amber-400 text-xs">⭐⭐⭐⭐⭐</span>
+          </div>
+          <p class="text-xs text-gray-600">التعامل راقي جداً وتوصيل سريع للمنزل. افحصت الطرد قبل ما ندفع. ننصحكم تشريو من عندهم.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="p-6 text-center text-xs text-gray-400 border-t border-gray-100">
+      جميع الحقوق محفوظة © 2026 - التوصيل متوفر لكافة الولايات 🇩🇿
+    </footer>
+
+  </div>
+
+  <!-- Mobile Floating Sticky Button -->
+  <div class="fixed bottom-0 left-0 right-0 p-3 bg-slate-900/90 backdrop-blur border-t border-slate-800 md:hidden z-50">
+    <a href="#orderFormSection" class="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-slate-950 font-black py-3 px-4 rounded-xl text-center block shadow-lg">
+      <i class="fas fa-shopping-cart ml-1"></i> أطلب الآن - الدفع عند الاستلام
+    </a>
+  </div>
+
+  <!-- Success Confirmation Modal -->
+  <div id="successModal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 text-white rounded-3xl p-6 md:p-8 max-w-md w-full text-center space-y-4 shadow-2xl">
+      <div class="w-20 h-20 bg-green-500/20 border-2 border-green-500 rounded-full flex items-center justify-center mx-auto text-green-400 text-4xl">
+        <i class="fas fa-check-double"></i>
+      </div>
+      <h3 class="text-2xl font-black text-green-400">تم تسجيل طلبك بنجاح! 🎉</h3>
+      <p class="text-sm text-gray-300" id="modalMessage">سيتصل بك فريق خدمة الزبائن قريباً جداً لتأكيد العنوان والشحن.</p>
+      <div class="bg-slate-800 p-3 rounded-xl text-xs font-mono text-blue-400">
+        رقم تتبع الطلب: <strong id="modalTracking">---</strong>
+      </div>
+      <button onclick="closeSuccessModal()" class="w-full bg-green-500 hover:bg-green-600 text-slate-950 font-bold py-3 rounded-xl transition-all">
+        حسناً، فهمت
+      </button>
+    </div>
+  </div>
+
+  <!-- JavaScript Code -->
+  <script>
+    let wilayasList = [];
+    let currentProduct = null;
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      startCountdown();
+      await fetchLandingData();
+    });
+
+    async function fetchLandingData() {
+      try {
+        const wilayaRes = await fetch('/api/public/wilayas');
+        wilayasList = await wilayaRes.json();
+        
+        const select = document.getElementById('wilayaSelect');
+        select.innerHTML = '<option value="">اختر الولاية (58 ولاية)</option>' +
+          wilayasList.map(w => `<option value="${w.id}">${w.code} - ${w.name_ar}</option>`).join('');
+
+        const productRes = await fetch('/api/public/products');
+        const products = await productRes.json();
+        
+        if (products.length > 0) {
+          currentProduct = products[0];
+          document.getElementById('landingProductName').textContent = currentProduct.name;
+          if (currentProduct.description) {
+            document.getElementById('landingProductDesc').textContent = currentProduct.description;
+          }
+          if (currentProduct.image_url) {
+            document.getElementById('productImage').src = currentProduct.image_url;
+          }
+          
+          const price = parseFloat(currentProduct.sale_price);
+          document.getElementById('salePrice').textContent = formatMoney(price);
+          document.getElementById('oldPrice').textContent = formatMoney(price * 1.4);
+          
+          calculateLandingTotal();
+        }
+      } catch (err) {
+        console.error('Fetch landing error:', err);
+      }
+    }
+
+    function calculateLandingTotal() {
+      if (!currentProduct) return;
+
+      const wilayaId = document.getElementById('wilayaSelect').value;
+      const deliveryType = document.querySelector('input[name="delivery_type"]:checked')?.value || 'home';
+      const qty = parseInt(document.querySelector('input[name="quantity"]:checked')?.value || '1');
+
+      let unitPrice = parseFloat(currentProduct.sale_price);
+      let productTotal = unitPrice * qty;
+
+      let deliveryCost = 0;
+      if (wilayaId) {
+        const w = wilayasList.find(item => item.id == wilayaId);
+        if (w) {
+          deliveryCost = deliveryType === 'home' ? parseFloat(w.delivery_cost_home) : parseFloat(w.delivery_cost_desk);
+        }
+      }
+
+      if (qty >= 2) {
+        deliveryCost = 0;
+      }
+
+      const grandTotal = productTotal + deliveryCost;
+
+      document.getElementById('productPriceSummary').textContent = formatMoney(productTotal);
+      document.getElementById('deliveryCostSummary').textContent = wilayaId 
+        ? (deliveryCost === 0 ? 'مجاني 🔥' : formatMoney(deliveryCost)) 
+        : 'اختر الولاية أولاً';
+      document.getElementById('grandTotalSummary').textContent = formatMoney(grandTotal);
+    }
+
+    async function submitPublicOrder(e) {
+      e.preventDefault();
+      if (!currentProduct) return alert('المنتج غير متوفر حالياً');
+
+      const btn = document.getElementById('submitBtn');
+      btn.disabled = true;
+      btn.innerHTML = `<i class="fas fa-spinner fa-spin text-xl"></i> <span>جاري تسجيل طلبك...</span>`;
+
+      const form = e.target;
+      const payload = {
+        customer_name: form.customer_name.value,
+        customer_phone: form.customer_phone.value,
+        customer_phone2: form.customer_phone2?.value || '',
+        wilaya_id: parseInt(form.wilaya_id.value),
+        commune: form.commune.value,
+        delivery_type: form.delivery_type.value,
+        quantity: parseInt(form.quantity.value),
+        product_id: currentProduct.id,
+        notes: 'طلب من Landing Page'
+      };
+
+      try {
+        const res = await fetch('/api/public/orders', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'حدث خطأ في التسجيل');
+
+        document.getElementById('modalTracking').textContent = data.tracking_id;
+        document.getElementById('modalMessage').textContent = data.message;
+        document.getElementById('successModal').classList.remove('hidden');
+
+        form.reset();
+        calculateLandingTotal();
+      } catch (err) {
+        alert(err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fas fa-check-circle text-2xl"></i> <span>تأكيد الطلب الآن الدفع عند الاستلام</span>`;
+      }
+    }
+
+    function closeSuccessModal() {
+      document.getElementById('successModal').classList.add('hidden');
+    }
+
+    function startCountdown() {
+      let duration = 3 * 3600 + 45 * 60 + 12;
+      setInterval(() => {
+        duration--;
+        if (duration <= 0) duration = 4 * 3600;
+        
+        const h = Math.floor(duration / 3600);
+        const m = Math.floor((duration % 3600) / 60);
+        const s = duration % 60;
+
+        document.getElementById('hours').textContent = h.toString().padStart(2, '0');
+        document.getElementById('minutes').textContent = m.toString().padStart(2, '0');
+        document.getElementById('seconds').textContent = s.toString().padStart(2, '0');
+      }, 1000);
+    }
+
+    function formatMoney(amount) {
+      return new Intl.NumberFormat('ar-DZ', { style: 'decimal', minimumFractionDigits: 0 }).format(amount || 0) + ' دج';
+    }
+  </script>
+
+</body>
+      </html>
