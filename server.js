@@ -1083,7 +1083,21 @@ app.get('/api/public/products', async (req, res) => {
     res.status(500).json({ error: 'خطأ في جلب المنتجات' });
   }
 });
-
+// جلب منتج محدد حسب الـ ID لصفحة الهبوط
+app.get('/api/public/products/:id', async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT id, name, sku, sale_price, stock_quantity, image_url, description FROM products WHERE id = $1 AND is_active = true',
+      [req.params.id]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'المنتج غير موجود أو غير نشط' });
+    }
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: 'خطأ في جلب المنتج' });
+  }
+});
 // إرسال طلبية من صفحة الهبوط مباشرة للـ CRM
 app.post('/api/public/orders', async (req, res) => {
   const client = await pool.connect();
