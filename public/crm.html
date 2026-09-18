@@ -389,6 +389,12 @@
             <label class="block text-sm font-medium text-gray-300 mb-1">تنبيه الحد الأدنى</label>
             <input type="number" name="min_stock_alert" value="10" class="input-field w-full rounded-xl px-4 py-2.5">
           </div>
+          
+          <div class="col-span-2">
+  <label class="block text-sm font-medium text-gray-300 mb-1">رابط صورة المنتج (Image URL)</label>
+  <input type="url" name="image_url" placeholder="https://example.com/image.jpg" class="input-field w-full rounded-xl px-4 py-2.5 text-sm">
+          </div>
+
           <div class="col-span-2">
             <label class="block text-sm font-medium text-gray-300 mb-1">الوصف</label>
             <textarea name="description" rows="2" class="input-field w-full rounded-xl px-4 py-2.5"></textarea>
@@ -904,42 +910,59 @@ async function loadProducts() {
 }
 
 function renderProducts() {
+function renderProducts() {
   const grid = document.getElementById('productsGrid');
   if (!products || products.length === 0) {
     grid.innerHTML = `<div class="col-span-full text-center py-12 text-gray-500"><i class="fas fa-box-open text-4xl mb-3 block"></i>لا توجد منتجات بعد</div>`;
     return;
   }
 
-  grid.innerHTML = products.map(p => `
-    <div class="stat-card rounded-2xl p-5 ${p.low_stock ? 'border-red-500/50' : ''} ${!p.is_active ? 'opacity-50' : ''}">
-      <div class="flex items-start justify-between mb-3">
-        <div>
-          <h4 class="font-bold text-lg">${p.name}</h4>
-          <p class="text-sm text-gray-400 font-mono">${p.sku}</p>
+  grid.innerHTML = products.map(p => {
+    const landingUrl = `${window.location.origin}/landing.html?p=${p.id}`;
+    
+    return `
+      <div class="stat-card rounded-2xl p-5 ${p.low_stock ? 'border-red-500/50' : ''} ${!p.is_active ? 'opacity-50' : ''}">
+        
+        <!-- صورة المنتج إن وجدت -->
+        ${p.image_url ? `<img src="${p.image_url}" class="w-full h-36 object-cover rounded-xl mb-3 border border-gray-700">` : ''}
+
+        <div class="flex items-start justify-between mb-3">
+          <div>
+            <h4 class="font-bold text-lg text-white">${p.name}</h4>
+            <p class="text-sm text-gray-400 font-mono">${p.sku}</p>
+          </div>
+          ${p.low_stock ? '<span class="badge bg-red-500 text-white">مخزون منخفض</span>' : ''}
         </div>
-        ${p.low_stock ? '<span class="badge bg-red-500 text-white">مخزون منخفض</span>' : ''}
+        
+        <div class="grid grid-cols-2 gap-3 mt-4 mb-4">
+          <div class="bg-slate-800/50 rounded-lg p-3 text-center">
+            <p class="text-xs text-gray-400">سعر البيع</p>
+            <p class="font-bold text-green-400">${formatMoney(p.sale_price)}</p>
+          </div>
+          <div class="bg-slate-800/50 rounded-lg p-3 text-center">
+            <p class="text-xs text-gray-400">المتوفر</p>
+            <p class="font-bold ${p.available_quantity <= 0 ? 'text-red-400' : 'text-emerald-400'}">${p.available_quantity}</p>
+          </div>
+        </div>
+
+        <!-- زر نسخ رابط صفحة الهبوط -->
+        <button onclick="copyLandingLink('${landingUrl}')" 
+                class="w-full bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 border border-blue-500/30 py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all">
+          <i class="fas fa-link"></i> نسخ رابط صفحة الهبوط
+        </button>
+
       </div>
-      
-      <div class="grid grid-cols-2 gap-3 mt-4">
-        <div class="bg-slate-800/50 rounded-lg p-3 text-center">
-          <p class="text-xs text-gray-400">سعر الشراء</p>
-          <p class="font-bold text-blue-400">${formatMoney(p.purchase_price)}</p>
-        </div>
-        <div class="bg-slate-800/50 rounded-lg p-3 text-center">
-          <p class="text-xs text-gray-400">سعر البيع</p>
-          <p class="font-bold text-green-400">${formatMoney(p.sale_price)}</p>
-        </div>
-        <div class="bg-slate-800/50 rounded-lg p-3 text-center">
-          <p class="text-xs text-gray-400">المخزون</p>
-          <p class="font-bold ${p.low_stock ? 'text-red-400' : 'text-white'}">${p.stock_quantity}</p>
-        </div>
-        <div class="bg-slate-800/50 rounded-lg p-3 text-center">
-          <p class="text-xs text-gray-400">المتوفر</p>
-          <p class="font-bold ${p.available_quantity <= 0 ? 'text-red-400' : 'text-emerald-400'}">${p.available_quantity}</p>
-        </div>
-      </div>
-    </div>
-  `).join('');
+    `;
+  }).join('');
+}
+
+// دالة نسخ الرابط
+function copyLandingLink(url) {
+  navigator.clipboard.writeText(url).then(() => {
+    showToast('تم نسخ رابط صفحة الهبوط للمنتج! ضعها في إعلاناتك 🚀', 'success');
+  }).catch(() => {
+    prompt('نسخ الرابط يدوياً:', url);
+  });
 }
 
 async function createProduct(e) {
@@ -955,7 +978,8 @@ async function createProduct(e) {
       sale_price: parseFloat(form.sale_price.value),
       weight: parseFloat(form.weight.value) || 0.5,
       stock_quantity: parseInt(form.stock_quantity.value) || 0,
-      min_stock_alert: parseInt(form.min_stock_alert.value) || 10
+      min_stock_alert: parseInt(form.min_stock_alert.value) || 10,
+      image_url: form.image_url?.value || ''
     });
 
     closeModal('newProductModal');
@@ -966,7 +990,6 @@ async function createProduct(e) {
     showToast(err.message, 'error');
   }
 }
-
 async function loadUsers() {
   try {
     const users = await apiCall('/api/users');
