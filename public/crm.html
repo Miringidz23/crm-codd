@@ -75,7 +75,7 @@
 </head>
 <body class="min-h-screen">
 
-<!-- Sidebar Overlay for Mobile -->
+<!-- Mobile Overlay -->
 <div id="sidebarOverlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/60 z-40 hidden md:hidden"></div>
 
 <!-- =================== SIDEBAR =================== -->
@@ -245,7 +245,6 @@
       </button>
     </div>
     <div class="stat-card rounded-2xl overflow-hidden">
-      <!-- 🔴 تحسين عرض الجدول للهاتف هنا -->
       <div class="overflow-x-auto">
         <table class="w-full text-sm min-w-[650px]">
           <thead>
@@ -332,10 +331,12 @@
             <span class="font-bold">المجموع: <strong class="text-green-400" id="orderTotalDisplay">0 دج</strong></span>
           </div>
         </div>
+
         <div>
           <label class="block text-sm font-medium text-gray-300 mb-1">ملاحظات</label>
           <textarea name="notes" rows="2" class="input-field w-full rounded-xl px-4 py-2.5 text-sm"></textarea>
         </div>
+
         <div class="flex gap-3 pt-2">
           <button type="submit" class="flex-1 bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 rounded-xl font-bold text-base md:text-lg hover:from-blue-600 hover:to-purple-700 transition-all">
             <i class="fas fa-save ml-2"></i>حفظ الطلبية
@@ -388,9 +389,10 @@
             <input type="number" name="min_stock_alert" value="10" class="input-field w-full rounded-xl px-4 py-2.5">
           </div>
           
+          <!-- 🔴 خانة صورة المنتج -->
           <div class="col-span-2">
-  <label class="block text-sm font-medium text-gray-300 mb-1">رابط صورة المنتج (Image URL)</label>
-  <input type="url" name="image_url" placeholder="https://example.com/image.jpg" class="input-field w-full rounded-xl px-4 py-2.5 text-sm">
+            <label class="block text-sm font-medium text-gray-300 mb-1">رابط صورة المنتج (Image URL)</label>
+            <input type="url" name="image_url" placeholder="https://example.com/image.jpg" class="input-field w-full rounded-xl px-4 py-2.5">
           </div>
 
           <div class="col-span-2">
@@ -573,7 +575,6 @@ function showSection(section) {
   };
   document.getElementById('sectionTitle').textContent = titles[section];
 
-  // Close sidebar on mobile after clicking
   if (window.innerWidth < 768) {
     const sidebar = document.getElementById('sidebar');
     const overlay = document.getElementById('sidebarOverlay');
@@ -594,12 +595,14 @@ async function loadDashboard() {
     const data = await apiCall('/api/dashboard/stats');
     renderDashboardStats(data);
   } catch (err) {
+    console.error('loadDashboard error:', err);
     showToast(err.message, 'error');
   }
 }
 
 function renderDashboardStats(data) {
-  const t = data.today;
+  if (!data) return;
+  const t = data.today || {};
   const statsCards = [
     { label: 'جديدة', value: t.new_orders, icon: 'fa-inbox', bg: 'from-blue-600 to-blue-800' },
     { label: 'مؤكدة', value: t.confirmed, icon: 'fa-check-circle', bg: 'from-green-600 to-green-800' },
@@ -664,7 +667,7 @@ function renderDashboardStats(data) {
     stockDiv.innerHTML = '<p class="text-green-400 text-center py-4"><i class="fas fa-check-circle ml-2"></i>جميع المنتجات بمخزون كافي</p>';
   }
 
-  const o = data.overall;
+  const o = data.overall || {};
   document.getElementById('overallStats').innerHTML = `
     <div class="bg-slate-800/50 rounded-xl p-3 md:p-4 text-center">
       <p class="text-xl md:text-2xl font-bold text-blue-400">${o.total_orders || 0}</p>
@@ -704,7 +707,7 @@ async function loadOrders(page = 1) {
 function renderOrders(data) {
   const tbody = document.getElementById('ordersTableBody');
   
-  if (!data.orders || data.orders.length === 0) {
+  if (!data || !data.orders || data.orders.length === 0) {
     tbody.innerHTML = `<tr><td colspan="11" class="text-center py-12 text-gray-500"><i class="fas fa-inbox text-4xl mb-3 block"></i>لا توجد طلبيات</td></tr>`;
     document.getElementById('ordersCount').textContent = '0 طلبية';
     return;
@@ -737,7 +740,7 @@ function renderOrders(data) {
     </tr>
   `).join('');
 
-  document.getElementById('ordersCount').textContent = `${data.total} طلبية`;
+  document.getElementById('ordersCount').textContent = `${data.total || 0} طلبية`;
   
   const pagDiv = document.getElementById('pagination');
   if (data.totalPages > 1) {
@@ -908,7 +911,6 @@ async function loadProducts() {
 }
 
 function renderProducts() {
-function renderProducts() {
   const grid = document.getElementById('productsGrid');
   if (!products || products.length === 0) {
     grid.innerHTML = `<div class="col-span-full text-center py-12 text-gray-500"><i class="fas fa-box-open text-4xl mb-3 block"></i>لا توجد منتجات بعد</div>`;
@@ -920,8 +922,6 @@ function renderProducts() {
     
     return `
       <div class="stat-card rounded-2xl p-5 ${p.low_stock ? 'border-red-500/50' : ''} ${!p.is_active ? 'opacity-50' : ''}">
-        
-        <!-- صورة المنتج إن وجدت -->
         ${p.image_url ? `<img src="${p.image_url}" class="w-full h-36 object-cover rounded-xl mb-3 border border-gray-700">` : ''}
 
         <div class="flex items-start justify-between mb-3">
@@ -943,21 +943,17 @@ function renderProducts() {
           </div>
         </div>
 
-        <!-- زر نسخ رابط صفحة الهبوط -->
-        <button onclick="copyLandingLink('${landingUrl}')" 
-                class="w-full bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 border border-blue-500/30 py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all">
+        <button onclick="copyLandingLink('${landingUrl}')" class="w-full bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 border border-blue-500/30 py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all">
           <i class="fas fa-link"></i> نسخ رابط صفحة الهبوط
         </button>
-
       </div>
     `;
   }).join('');
 }
 
-// دالة نسخ الرابط
 function copyLandingLink(url) {
   navigator.clipboard.writeText(url).then(() => {
-    showToast('تم نسخ رابط صفحة الهبوط للمنتج! ضعها في إعلاناتك 🚀', 'success');
+    showToast('تم نسخ رابط صفحة الهبوط للمنتج! 🚀', 'success');
   }).catch(() => {
     prompt('نسخ الرابط يدوياً:', url);
   });
@@ -977,7 +973,7 @@ async function createProduct(e) {
       weight: parseFloat(form.weight.value) || 0.5,
       stock_quantity: parseInt(form.stock_quantity.value) || 0,
       min_stock_alert: parseInt(form.min_stock_alert.value) || 10,
-      image_url: form.image_url?.value || ''
+      image_url: form.image_url ? form.image_url.value : ''
     });
 
     closeModal('newProductModal');
@@ -988,6 +984,7 @@ async function createProduct(e) {
     showToast(err.message, 'error');
   }
 }
+
 async function loadUsers() {
   try {
     const users = await apiCall('/api/users');
@@ -997,7 +994,6 @@ async function loadUsers() {
   }
 }
 
-// 🔴 عرض المستخدمين المحدث (تفعيل/تعطيل وحذف)
 function renderUsers(users) {
   document.getElementById('usersTableBody').innerHTML = users.map(u => `
     <tr class="table-row border-b border-gray-800">
@@ -1014,12 +1010,10 @@ function renderUsers(users) {
       </td>
       <td class="px-4 py-3 text-center">
         <div class="flex items-center justify-center gap-2">
-          <!-- زر التفعيل والتعطيل المصحح -->
           <button onclick="toggleUserStatus(${u.id}, ${!u.is_active})" class="p-1 text-sm ${u.is_active ? 'text-yellow-400 hover:text-yellow-300' : 'text-green-400 hover:text-green-300'}" title="${u.is_active ? 'تعطيل' : 'تفعيل'}">
             <i class="fas ${u.is_active ? 'fa-ban' : 'fa-check-circle'}"></i>
           </button>
           
-          <!-- زر الحذف -->
           ${u.username !== 'admin' ? `
             <button onclick="deleteUser(${u.id}, '${u.full_name}')" class="p-1 text-sm text-red-500 hover:text-red-400" title="حذف">
               <i class="fas fa-trash"></i>
@@ -1031,7 +1025,6 @@ function renderUsers(users) {
   `).join('');
 }
 
-// 🔴 دالة تفعيل وتغطيل المستخدم
 async function toggleUserStatus(userId, newStatus) {
   try {
     await apiCall(`/api/users/${userId}/toggle`, 'PATCH', { is_active: newStatus });
@@ -1042,7 +1035,6 @@ async function toggleUserStatus(userId, newStatus) {
   }
 }
 
-// 🔴 دالة حذف المستخدم
 async function deleteUser(userId, fullName) {
   if (!confirm(`هل أنت متأكد من حذف المستخدم "${fullName}" نهائياً؟`)) return;
   try {
