@@ -286,8 +286,9 @@
       await fetchLandingData();
     });
 
-    async function fetchLandingData() {
+        async function fetchLandingData() {
       try {
+        // 1. جلب الولايات
         const wilayaRes = await fetch('/api/public/wilayas');
         wilayasList = await wilayaRes.json();
         
@@ -295,16 +296,32 @@
         select.innerHTML = '<option value="">اختر الولاية (58 ولاية)</option>' +
           wilayasList.map(w => `<option value="${w.id}">${w.code} - ${w.name_ar}</option>`).join('');
 
-        const productRes = await fetch('/api/public/products');
-        const products = await productRes.json();
+        // 2. قراءة ID المنتج من رابط الصفحة (مثال: landing.html?p=2)
+        const urlParams = new URLSearchParams(window.location.search);
+        const productId = urlParams.get('p') || urlParams.get('id');
+
+        if (productId) {
+          const productRes = await fetch(`/api/public/products/${productId}`);
+          if (productRes.ok) {
+            currentProduct = await productRes.json();
+          }
+        }
+
+        // إذا لم يحدد ID في الرابط أو لم يُعثر عليه، نأخذ المنتج الأول أوتوماتيكياً
+        if (!currentProduct) {
+          const allProdRes = await fetch('/api/public/products');
+          const products = await allProdRes.json();
+          if (products.length > 0) currentProduct = products[0];
+        }
         
-        if (products.length > 0) {
-          currentProduct = products[0];
+        if (currentProduct) {
           document.getElementById('landingProductName').textContent = currentProduct.name;
           if (currentProduct.description) {
             document.getElementById('landingProductDesc').textContent = currentProduct.description;
           }
-          if (currentProduct.image_url) {
+          
+          // عرض صورة المنتج إذا توفرت
+          if (currentProduct.image_url && currentProduct.image_url.trim() !== '') {
             document.getElementById('productImage').src = currentProduct.image_url;
           }
           
@@ -317,8 +334,7 @@
       } catch (err) {
         console.error('Fetch landing error:', err);
       }
-    }
-
+        }
     function calculateLandingTotal() {
       if (!currentProduct) return;
 
