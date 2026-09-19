@@ -621,7 +621,7 @@ app.get('/api/orders', authenticateToken, async (req, res) => {
   }
 });
 
-// إنشاء طلبية جديدة (متعددة المنتجات)
+      // إنشاء طلبية جديدة (مع إضافة سعر الشحن للمجموع الكلي)
 app.post('/api/orders', authenticateToken, async (req, res) => {
   const client = await pool.connect();
   try {
@@ -637,7 +637,7 @@ app.post('/api/orders', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'البيانات ناقصة: الاسم، الهاتف، الولاية، والمنتجات مطلوبة' });
     }
 
-    // كشف التكرار (نفس الرقم في آخر 24 ساعة)
+    // كشف التكرار
     const duplicateCheck = await client.query(
       `SELECT id, tracking_id FROM orders 
        WHERE customer_phone = $1 AND created_at > NOW() - INTERVAL '24 hours'
@@ -647,19 +647,19 @@ app.post('/api/orders', authenticateToken, async (req, res) => {
 
     let isDuplicate = duplicateCheck.rows.length > 0;
 
-    // جلب تكاليف التوصيل
+    // جلب تكاليف التوصيل للولاية
     const wilaya = await client.query('SELECT * FROM wilayas WHERE id = $1', [wilaya_id]);
     if (wilaya.rows.length === 0) {
       await client.query('ROLLBACK');
       return res.status(400).json({ error: 'الولاية المختارة غير موجودة' });
     }
 
-    const delivery_cost = delivery_type === 'home' 
+    const delivery_cost = parseFloat(delivery_type === 'home' 
       ? wilaya.rows[0].delivery_cost_home 
-      : wilaya.rows[0].delivery_cost_desk;
+      : wilaya.rows[0].delivery_cost_desk) || 0;
 
-    // حساب المجموع
-    let totalAmount = 0;
+    // حساب مجموع المنتجات
+    let productsTotal = 0;
     const orderItems = [];
 
     for (const item of items) {
@@ -680,8 +680,8 @@ app.post('/api/orders', authenticateToken, async (req, res) => {
         });
       }
 
-      const itemTotal = p.sale_price * item.quantity;
-      totalAmount += itemTotal;
+      const itemTotal = parseFloat(p.sale_price) * item.quantity;
+      productsTotal += itemTotal;
       orderItems.push({
         product_id: p.id,
         product_name: p.name,
@@ -691,7 +691,10 @@ app.post('/api/orders', authenticateToken, async (req, res) => {
       });
     }
 
-    // التوزيع التلقائي على الـ Agent (معدل ومصحح لـ PostgreSQL)
+    // 🔴 المجموع الكلي المطلـوب تحصيله (سعر السلعة + سعر الشحن)
+    const grandTotalCOD = productsTotal + delivery_cost;
+
+    // التوزيع التلقائي على العمال
     let assignedTo = null;
     if (req.user.role === 'admin' || req.user.role === 'supervisor') {
       const agents = await client.query(
@@ -706,17 +709,14 @@ app.post('/api/orders', authenticateToken, async (req, res) => {
          ORDER BY today_count ASC
          LIMIT 1`
       );
-      if (agents.rows.length > 0) {
-        assignedTo = agents.rows[0].id;
-      }
+      if (agents.rows.length > 0) assignedTo = agents.rows[0].id;
     } else if (req.user.role === 'agent') {
       assignedTo = req.user.id;
     }
 
-    const trackingId = generateTrackingId();
-    const netAmount = totalAmount;
+    const trackingId = 'DZ' + Date.now().toString().slice(-6) + Math.random().toString(36).substring(2, 5).toUpperCase();
 
-    // إدخال الطلبية
+    // إدخال الطلبية بالمجموع الكلي
     const orderResult = await client.query(
       `INSERT INTO orders (tracking_id, customer_name, customer_phone, customer_phone2,
        wilaya_id, commune, address, delivery_type, status, total_amount, delivery_cost,
@@ -725,12 +725,11 @@ app.post('/api/orders', authenticateToken, async (req, res) => {
       [trackingId, customer_name, customer_phone, customer_phone2,
        wilaya_id, commune, address, delivery_type || 'desk',
        isDuplicate ? 'duplicate' : 'new',
-       totalAmount, delivery_cost, netAmount, assignedTo, notes, source || 'manual']
+       grandTotalCOD, delivery_cost, grandTotalCOD, assignedTo, notes, source || 'manual']
     );
 
     const orderId = orderResult.rows[0].id;
 
-    // إدخال عناصر الطلبية وحجز المخزون
     for (const item of orderItems) {
       await client.query(
         `INSERT INTO order_items (order_id, product_id, product_name, quantity, unit_price, total_price)
@@ -738,13 +737,41 @@ app.post('/api/orders', authenticateToken, async (req, res) => {
         [orderId, item.product_id, item.product_name, item.quantity, item.unit_price, item.total_price]
       );
 
-      // حجز المخزون
       await client.query(
         'UPDATE products SET reserved_quantity = reserved_quantity + $1, updated_at = NOW() WHERE id = $2',
         [item.quantity, item.product_id]
       );
     }
 
+    await client.query(
+      `INSERT INTO order_history (order_id, user_id, action, new_status, note)
+       VALUES ($1, $2, 'created', $3, $4)`,
+      [orderId, req.user.id, isDuplicate ? 'duplicate' : 'new',
+       isDuplicate ? `⚠️ تكرار مع رقم هاتف سابق` : 'طلبية جديدة']
+    );
+
+    await client.query('COMMIT');
+
+    const fullOrder = await pool.query(
+      `SELECT o.*, w.name_ar as wilaya_name, w.code as wilaya_code
+       FROM orders o LEFT JOIN wilayas w ON o.wilaya_id = w.id
+       WHERE o.id = $1`, [orderId]
+    );
+    fullOrder.rows[0].items = orderItems;
+
+    res.status(201).json({
+      order: fullOrder.rows[0],
+      warning: isDuplicate ? `⚠️ رقم الهاتف موجود في طلبية سابقة` : null
+    });
+
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Create order error:', err);
+    res.status(500).json({ error: 'خطأ في إنشاء الطلبية' });
+  } finally {
+    client.release();
+  }
+});
     // تسجيل في السجل
     await client.query(
       `INSERT INTO order_history (order_id, user_id, action, new_status, note)
