@@ -1,6 +1,7 @@
+
 // ============================================================
 //  COD CRM ENTERPRISE SYSTEM - الجزائر
-//  المرحلة 1: المنتجات + المخزون + المستخدمين + توزيع الطلبيات
+//  السيرفر الرئيسي المتكامل (Backend)
 // ============================================================
 
 require('dotenv').config();
@@ -30,11 +31,12 @@ const pool = new Pool({
   connectionTimeoutMillis: 2000,
 });
 
-// ======================== إنشاء الجداول ========================
+// ======================== INIT DATABASE ========================
 async function initDatabase() {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
+
     // -------- جدول المستخدمين --------
     await client.query(`
       CREATE TABLE IF NOT EXISTS users (
@@ -127,7 +129,7 @@ async function initDatabase() {
       );
     `);
 
-    // -------- جدول عناصر الطلبية (Multi-Product) --------
+    // -------- جدول عناصر الطلبية --------
     await client.query(`
       CREATE TABLE IF NOT EXISTS order_items (
         id SERIAL PRIMARY KEY,
@@ -165,18 +167,7 @@ async function initDatabase() {
       );
     `);
 
-    // -------- إنشاء الفهارس --------
-    await client.query(`
-      CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
-      CREATE INDEX IF NOT EXISTS idx_orders_assigned ON orders(assigned_to);
-      CREATE INDEX IF NOT EXISTS idx_orders_tracking ON orders(tracking_id);
-      CREATE INDEX IF NOT EXISTS idx_orders_phone ON orders(customer_phone);
-      CREATE INDEX IF NOT EXISTS idx_orders_created ON orders(created_at);
-      CREATE INDEX IF NOT EXISTS idx_products_sku ON products(sku);
-      CREATE INDEX IF NOT EXISTS idx_order_items_order ON order_items(order_id);
-    `);
-
-    // -------- إدخال الولايات الجزائرية --------
+    // -------- إدخال الولايات الجزائرية الـ 58 --------
     const wilayaCount = await client.query('SELECT COUNT(*) FROM wilayas');
     if (parseInt(wilayaCount.rows[0].count) === 0) {
       const wilayas = [
@@ -221,9 +212,7 @@ async function initDatabase() {
     }
 
     // -------- إنشاء حساب Admin افتراضي --------
-    const adminExists = await client.query(
-      "SELECT id FROM users WHERE username = 'admin'"
-    );
+    const adminExists = await client.query("SELECT id FROM users WHERE username = 'admin'");
     if (adminExists.rows.length === 0) {
       const hash = await bcrypt.hash('admin123', 12);
       await client.query(
@@ -231,7 +220,6 @@ async function initDatabase() {
          VALUES ('admin', $1, 'مدير النظام', 'admin', '0550000000')`,
         [hash]
       );
-      console.log('✅ Admin account created: admin / admin123');
     }
 
     await client.query('COMMIT');
@@ -239,7 +227,6 @@ async function initDatabase() {
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('❌ Database init error:', err);
-    throw err;
   } finally {
     client.release();
   }
@@ -251,7 +238,9 @@ function authenticateToken(req, res, next) {
   const token = authHeader && authHeader.split(' ')[1];
   if (!token) return res.status(401).json({ error: 'غير مصرح' });
 
-  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+  const secret = process.env.JWT_SECRET || 'dz_cod_crm_fallback_secret_key_2024';
+
+  jwt.verify(token, secret, (err, user) => {
     if (err) return res.status(403).json({ error: 'جلسة منتهية' });
     req.user = user;
     next();
@@ -267,18 +256,7 @@ function requireRole(...roles) {
   };
 }
 
-// ======================== HELPER FUNCTIONS ========================
-function generateTrackingId() {
-  const date = new Date();
-  const prefix = 'DZ';
-  const datePart = date.toISOString().slice(2, 10).replace(/-/g, '');
-  const random = Math.random().toString(36).substring(2, 8).toUpperCase();
-  return `${prefix}${datePart}${random}`;
-}
-
 // ======================== AUTH ROUTES ========================
-
-// تسجيل الدخول
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -297,9 +275,11 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(401).json({ error: 'اسم المستخدم أو كلمة المرور غير صحيحة' });
     }
 
+    const secret = process.env.JWT_SECRET || 'dz_cod_crm_fallback_secret_key_2024';
+
     const token = jwt.sign(
       { id: user.id, username: user.username, role: user.role, full_name: user.full_name },
-      process.env.JWT_SECRET,
+      secret,
       { expiresIn: '12h' }
     );
 
@@ -319,26 +299,21 @@ app.post('/api/auth/login', async (req, res) => {
 });
 
 // ======================== USERS MANAGEMENT ========================
-
-// جلب جميع المستخدمين
 app.get('/api/users', authenticateToken, requireRole('admin'), async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT id, username, full_name, role, phone, is_active, max_daily_orders,
               created_at,
               (SELECT COUNT(*) FROM orders WHERE assigned_to = users.id AND status = 'new') as pending_orders,
-              (SELECT COUNT(*) FROM orders WHERE confirmed_by = users.id 
-               AND DATE(confirmed_at) = CURRENT_DATE) as today_confirmed
+              (SELECT COUNT(*) FROM orders WHERE confirmed_by = users.id AND DATE(confirmed_at) = CURRENT_DATE) as today_confirmed
        FROM users ORDER BY created_at DESC`
     );
     res.json(result.rows);
   } catch (err) {
-    console.error('Get users error:', err);
     res.status(500).json({ error: 'خطأ في جلب المستخدمين' });
   }
 });
 
-// إنشاء مستخدم جديد
 app.post('/api/users', authenticateToken, requireRole('admin'), async (req, res) => {
   try {
     const { username, password, full_name, role, phone, max_daily_orders } = req.body;
@@ -359,37 +334,10 @@ app.post('/api/users', authenticateToken, requireRole('admin'), async (req, res)
     if (err.code === '23505') {
       return res.status(400).json({ error: 'اسم المستخدم موجود مسبقاً' });
     }
-    console.error('Create user error:', err);
     res.status(500).json({ error: 'خطأ في إنشاء المستخدم' });
   }
 });
 
-// تحديث مستخدم
-app.put('/api/users/:id', authenticateToken, requireRole('admin'), async (req, res) => {
-  try {
-    const { full_name, role, phone, is_active, max_daily_orders, password } = req.body;
-    
-    let query, params;
-    if (password) {
-      const hash = await bcrypt.hash(password, 12);
-      query = `UPDATE users SET full_name=$1, role=$2, phone=$3, is_active=$4, 
-               max_daily_orders=$5, password_hash=$6, updated_at=NOW() WHERE id=$7 RETURNING *`;
-      params = [full_name, role, phone, is_active, max_daily_orders, hash, req.params.id];
-    } else {
-      query = `UPDATE users SET full_name=$1, role=$2, phone=$3, is_active=$4, 
-               max_daily_orders=$5, updated_at=NOW() WHERE id=$6 RETURNING *`;
-      params = [full_name, role, phone, is_active, max_daily_orders, req.params.id];
-    }
-
-    const result = await pool.query(query, params);
-    res.json(result.rows[0]);
-  } catch (err) {
-    console.error('Update user error:', err);
-    res.status(500).json({ error: 'خطأ في تحديث المستخدم' });
-  }
-});
-
-// تحديث حالة المستخدم (تفعيل / تعطيل)
 app.patch('/api/users/:id/toggle', authenticateToken, requireRole('admin'), async (req, res) => {
   try {
     const { is_active } = req.body;
@@ -410,12 +358,10 @@ app.patch('/api/users/:id/toggle', authenticateToken, requireRole('admin'), asyn
 
     res.json({ message: 'تم تحديث حالة المستخدم بنجاح', user: result.rows[0] });
   } catch (err) {
-    console.error('Toggle user error:', err);
     res.status(500).json({ error: 'خطأ في تحديث حالة المستخدم' });
   }
 });
 
-// حذف مستخدم نهائياً
 app.delete('/api/users/:id', authenticateToken, requireRole('admin'), async (req, res) => {
   try {
     const userId = parseInt(req.params.id);
@@ -435,14 +381,11 @@ app.delete('/api/users/:id', authenticateToken, requireRole('admin'), async (req
     await pool.query('DELETE FROM users WHERE id = $1', [userId]);
     res.json({ message: 'تم حذف المستخدم بنجاح' });
   } catch (err) {
-    console.error('Delete user error:', err);
     res.status(500).json({ error: 'خطأ في حذف المستخدم' });
   }
 });
 
 // ======================== PRODUCTS MANAGEMENT ========================
-
-// جلب جميع المنتجات
 app.get('/api/products', authenticateToken, async (req, res) => {
   try {
     const result = await pool.query(
@@ -454,12 +397,10 @@ app.get('/api/products', authenticateToken, async (req, res) => {
     );
     res.json(result.rows);
   } catch (err) {
-    console.error('Get products error:', err);
     res.status(500).json({ error: 'خطأ في جلب المنتجات' });
   }
 });
 
-// إنشاء منتج جديد
 app.post('/api/products', authenticateToken, requireRole('admin', 'supervisor'), async (req, res) => {
   try {
     const { name, sku, description, purchase_price, sale_price, weight, 
@@ -482,42 +423,15 @@ app.post('/api/products', authenticateToken, requireRole('admin', 'supervisor'),
     if (err.code === '23505') {
       return res.status(400).json({ error: 'رمز SKU موجود مسبقاً' });
     }
-    console.error('Create product error:', err);
     res.status(500).json({ error: 'خطأ في إنشاء المنتج' });
   }
 });
 
-// تحديث منتج
-app.put('/api/products/:id', authenticateToken, requireRole('admin', 'supervisor'), async (req, res) => {
-  try {
-    const { name, description, purchase_price, sale_price, weight,
-            stock_quantity, min_stock_alert, image_url, is_active } = req.body;
-
-    const result = await pool.query(
-      `UPDATE products SET name=$1, description=$2, purchase_price=$3, sale_price=$4,
-       weight=$5, stock_quantity=$6, min_stock_alert=$7, image_url=$8, is_active=$9,
-       updated_at=NOW() WHERE id=$10 RETURNING *`,
-      [name, description, purchase_price, sale_price, weight, stock_quantity,
-       min_stock_alert, image_url, is_active, req.params.id]
-    );
-
-    res.json(result.rows[0]);
-  } catch (err) {
-    console.error('Update product error:', err);
-    res.status(500).json({ error: 'خطأ في تحديث المنتج' });
-  }
-});
-
-// حذف منتج (soft delete)
 app.delete('/api/products/:id', authenticateToken, requireRole('admin'), async (req, res) => {
   try {
-    await pool.query(
-      'UPDATE products SET is_active = false, updated_at = NOW() WHERE id = $1',
-      [req.params.id]
-    );
-    res.json({ message: 'تم تعطيل المنتج' });
+    await pool.query('UPDATE products SET is_active = false, updated_at = NOW() WHERE id = $1', [req.params.id]);
+    res.json({ message: 'تم تعطيل/حذف المنتج بنجاح' });
   } catch (err) {
-    console.error('Delete product error:', err);
     res.status(500).json({ error: 'خطأ في حذف المنتج' });
   }
 });
@@ -533,16 +447,13 @@ app.get('/api/wilayas', authenticateToken, async (req, res) => {
 });
 
 // ======================== ORDERS MANAGEMENT ========================
-
-// جلب الطلبيات (مع فلترة وتصفح)
 app.get('/api/orders', authenticateToken, async (req, res) => {
   try {
-    const { status, assigned_to, page = 1, limit = 50, search, date_from, date_to } = req.query;
+    const { status, assigned_to, page = 1, limit = 50, search } = req.query;
     let where = [];
     let params = [];
     let paramIndex = 1;
 
-    // Agent يشوف غير الطلبيات المخصصة له
     if (req.user.role === 'agent') {
       where.push(`o.assigned_to = $${paramIndex++}`);
       params.push(req.user.id);
@@ -557,31 +468,16 @@ app.get('/api/orders', authenticateToken, async (req, res) => {
     }
 
     if (search) {
-      where.push(`(o.customer_name ILIKE $${paramIndex} OR o.customer_phone ILIKE $${paramIndex} 
-                   OR o.tracking_id ILIKE $${paramIndex})`);
+      where.push(`(o.customer_name ILIKE $${paramIndex} OR o.customer_phone ILIKE $${paramIndex} OR o.tracking_id ILIKE $${paramIndex})`);
       params.push(`%${search}%`);
       paramIndex++;
-    }
-
-    if (date_from) {
-      where.push(`o.created_at >= $${paramIndex++}`);
-      params.push(date_from);
-    }
-
-    if (date_to) {
-      where.push(`o.created_at <= $${paramIndex++}`);
-      params.push(date_to + ' 23:59:59');
     }
 
     const whereClause = where.length > 0 ? 'WHERE ' + where.join(' AND ') : '';
     const offset = (page - 1) * limit;
 
-    // Count total
-    const countResult = await pool.query(
-      `SELECT COUNT(*) FROM orders o ${whereClause}`, params
-    );
+    const countResult = await pool.query(`SELECT COUNT(*) FROM orders o ${whereClause}`, params);
 
-    // Get orders
     params.push(limit, offset);
     const result = await pool.query(
       `SELECT o.*, 
@@ -598,7 +494,6 @@ app.get('/api/orders', authenticateToken, async (req, res) => {
       params
     );
 
-    // Get items for each order
     for (let order of result.rows) {
       const items = await pool.query(
         `SELECT oi.*, p.sku FROM order_items oi 
@@ -616,12 +511,11 @@ app.get('/api/orders', authenticateToken, async (req, res) => {
       totalPages: Math.ceil(countResult.rows[0].count / limit)
     });
   } catch (err) {
-    console.error('Get orders error:', err);
     res.status(500).json({ error: 'خطأ في جلب الطلبيات' });
   }
 });
 
-      // إنشاء طلبية جديدة (مع إضافة سعر الشحن للمجموع الكلي)
+// إنشاء طلبية مع إضافة سعر الشحن تلقائياً للمجموع الصافي
 app.post('/api/orders', authenticateToken, async (req, res) => {
   const client = await pool.connect();
   try {
@@ -637,7 +531,6 @@ app.post('/api/orders', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'البيانات ناقصة: الاسم، الهاتف، الولاية، والمنتجات مطلوبة' });
     }
 
-    // كشف التكرار
     const duplicateCheck = await client.query(
       `SELECT id, tracking_id FROM orders 
        WHERE customer_phone = $1 AND created_at > NOW() - INTERVAL '24 hours'
@@ -647,7 +540,6 @@ app.post('/api/orders', authenticateToken, async (req, res) => {
 
     let isDuplicate = duplicateCheck.rows.length > 0;
 
-    // جلب تكاليف التوصيل للولاية
     const wilaya = await client.query('SELECT * FROM wilayas WHERE id = $1', [wilaya_id]);
     if (wilaya.rows.length === 0) {
       await client.query('ROLLBACK');
@@ -658,7 +550,6 @@ app.post('/api/orders', authenticateToken, async (req, res) => {
       ? wilaya.rows[0].delivery_cost_home 
       : wilaya.rows[0].delivery_cost_desk) || 0;
 
-    // حساب مجموع المنتجات
     let productsTotal = 0;
     const orderItems = [];
 
@@ -691,10 +582,9 @@ app.post('/api/orders', authenticateToken, async (req, res) => {
       });
     }
 
-    // 🔴 المجموع الكلي المطلـوب تحصيله (سعر السلعة + سعر الشحن)
+    // 🔴 المجموع الكلي الصافي المطلـوب تحصيله = سعر السلعة + سعر الشحن
     const grandTotalCOD = productsTotal + delivery_cost;
 
-    // التوزيع التلقائي على العمال
     let assignedTo = null;
     if (req.user.role === 'admin' || req.user.role === 'supervisor') {
       const agents = await client.query(
@@ -716,7 +606,6 @@ app.post('/api/orders', authenticateToken, async (req, res) => {
 
     const trackingId = 'DZ' + Date.now().toString().slice(-6) + Math.random().toString(36).substring(2, 5).toUpperCase();
 
-    // إدخال الطلبية بالمجموع الكلي
     const orderResult = await client.query(
       `INSERT INTO orders (tracking_id, customer_name, customer_phone, customer_phone2,
        wilaya_id, commune, address, delivery_type, status, total_amount, delivery_cost,
@@ -772,37 +661,7 @@ app.post('/api/orders', authenticateToken, async (req, res) => {
     client.release();
   }
 });
-    // تسجيل في السجل
-    await client.query(
-      `INSERT INTO order_history (order_id, user_id, action, new_status, note)
-       VALUES ($1, $2, 'created', $3, $4)`,
-      [orderId, req.user.id, isDuplicate ? 'duplicate' : 'new',
-       isDuplicate ? `⚠️ تكرار مع الطلبية ${duplicateCheck.rows[0].tracking_id}` : 'طلبية جديدة']
-    );
 
-    await client.query('COMMIT');
-
-    // إرجاع الطلبية مع التفاصيل
-    const fullOrder = await pool.query(
-      `SELECT o.*, w.name_ar as wilaya_name, w.code as wilaya_code
-       FROM orders o LEFT JOIN wilayas w ON o.wilaya_id = w.id
-       WHERE o.id = $1`, [orderId]
-    );
-    fullOrder.rows[0].items = orderItems;
-
-    res.status(201).json({
-      order: fullOrder.rows[0],
-      warning: isDuplicate ? `⚠️ رقم الهاتف موجود في طلبية سابقة` : null
-    });
-
-  } catch (err) {
-    await client.query('ROLLBACK');
-    console.error('Create order error:', err);
-    res.status(500).json({ error: err.message || 'خطأ في إنشاء الطلبية' });
-  } finally {
-    client.release();
-  }
-});
 // تحديث حالة الطلبية
 app.put('/api/orders/:id/status', authenticateToken, async (req, res) => {
   const client = await pool.connect();
@@ -818,7 +677,6 @@ app.put('/api/orders/:id/status', authenticateToken, async (req, res) => {
 
     const oldStatus = currentOrder.rows[0].status;
 
-    // تحديث إضافي حسب الحالة
     let extraFields = '';
     if (status === 'confirmed') {
       extraFields = ', confirmed_by = ' + req.user.id + ", confirmed_at = NOW()";
@@ -828,11 +686,8 @@ app.put('/api/orders/:id/status', authenticateToken, async (req, res) => {
       extraFields = ", delivered_at = NOW()";
     }
 
-    // إذا تأكدت الطلبية → خصم من المخزون الحقيقي
     if (status === 'confirmed' && oldStatus !== 'confirmed') {
-      const items = await client.query(
-        'SELECT * FROM order_items WHERE order_id = $1', [orderId]
-      );
+      const items = await client.query('SELECT * FROM order_items WHERE order_id = $1', [orderId]);
       for (const item of items.rows) {
         await client.query(
           `UPDATE products SET 
@@ -845,42 +700,31 @@ app.put('/api/orders/:id/status', authenticateToken, async (req, res) => {
       }
     }
 
-    // إذا ألغيت → إرجاع الحجز
-    if ((status === 'cancelled' || status === 'duplicate') && 
-        !['confirmed', 'shipped', 'delivered'].includes(oldStatus)) {
-      const items = await client.query(
-        'SELECT * FROM order_items WHERE order_id = $1', [orderId]
-      );
+    if ((status === 'cancelled' || status === 'duplicate') && !['confirmed', 'shipped', 'delivered'].includes(oldStatus)) {
+      const items = await client.query('SELECT * FROM order_items WHERE order_id = $1', [orderId]);
       for (const item of items.rows) {
         await client.query(
-          `UPDATE products SET reserved_quantity = GREATEST(reserved_quantity - $1, 0),
-           updated_at = NOW() WHERE id = $2`,
+          `UPDATE products SET reserved_quantity = GREATEST(reserved_quantity - $1, 0), updated_at = NOW() WHERE id = $2`,
           [item.quantity, item.product_id]
         );
       }
     }
 
-    // إذا مرتجعة → إرجاع المخزون
     if (status === 'returned' && ['confirmed', 'shipped', 'delivered'].includes(oldStatus)) {
-      const items = await client.query(
-        'SELECT * FROM order_items WHERE order_id = $1', [orderId]
-      );
+      const items = await client.query('SELECT * FROM order_items WHERE order_id = $1', [orderId]);
       for (const item of items.rows) {
         await client.query(
-          `UPDATE products SET stock_quantity = stock_quantity + $1,
-           updated_at = NOW() WHERE id = $2`,
+          `UPDATE products SET stock_quantity = stock_quantity + $1, updated_at = NOW() WHERE id = $2`,
           [item.quantity, item.product_id]
         );
       }
     }
 
     await client.query(
-      `UPDATE orders SET status = $1, call_attempts = call_attempts + 1,
-       last_call_at = NOW(), updated_at = NOW() ${extraFields} WHERE id = $2`,
+      `UPDATE orders SET status = $1, call_attempts = call_attempts + 1, last_call_at = NOW(), updated_at = NOW() ${extraFields} WHERE id = $2`,
       [status, orderId]
     );
 
-    // سجل الإجراء
     await client.query(
       `INSERT INTO order_history (order_id, user_id, action, old_status, new_status, note)
        VALUES ($1, $2, 'status_change', $3, $4, $5)`,
@@ -891,40 +735,87 @@ app.put('/api/orders/:id/status', authenticateToken, async (req, res) => {
     res.json({ message: 'تم تحديث الحالة بنجاح' });
   } catch (err) {
     await client.query('ROLLBACK');
-    console.error('Update status error:', err);
     res.status(500).json({ error: 'خطأ في تحديث الحالة' });
   } finally {
     client.release();
   }
 });
 
-// توزيع الطلبيات يدوياً
-app.post('/api/orders/assign', authenticateToken, requireRole('admin', 'supervisor'), async (req, res) => {
+// حذف طلبية واحدة
+app.delete('/api/orders/:id', authenticateToken, requireRole('admin'), async (req, res) => {
+  const client = await pool.connect();
   try {
-    const { order_ids, agent_id } = req.body;
-    
-    const agent = await pool.query(
-      'SELECT * FROM users WHERE id = $1 AND role = $2 AND is_active = true',
-      [agent_id, 'agent']
-    );
-    if (agent.rows.length === 0) {
-      return res.status(400).json({ error: 'العامل غير موجود أو غير نشط' });
+    await client.query('BEGIN');
+    const orderId = req.params.id;
+
+    const items = await client.query('SELECT * FROM order_items WHERE order_id = $1', [orderId]);
+    const order = await client.query('SELECT status FROM orders WHERE id = $1', [orderId]);
+
+    if (order.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'الطلبية غير موجودة' });
     }
 
-    await pool.query(
-      `UPDATE orders SET assigned_to = $1, updated_at = NOW() 
-       WHERE id = ANY($2) AND status IN ('new', 'callback', 'no_answer')`,
-      [agent_id, order_ids]
-    );
+    const currentStatus = order.rows[0].status;
 
-    res.json({ message: `تم توزيع ${order_ids.length} طلبية على ${agent.rows[0].full_name}` });
+    if (['new', 'callback', 'no_answer'].includes(currentStatus)) {
+      for (const item of items.rows) {
+        await client.query(
+          'UPDATE products SET reserved_quantity = GREATEST(reserved_quantity - $1, 0) WHERE id = $2',
+          [item.quantity, item.product_id]
+        );
+      }
+    }
+
+    await client.query('DELETE FROM order_history WHERE order_id = $1', [orderId]);
+    await client.query('DELETE FROM order_items WHERE order_id = $1', [orderId]);
+    await client.query('DELETE FROM orders WHERE id = $1', [orderId]);
+
+    await client.query('COMMIT');
+    res.json({ message: 'تم حذف الطلبية وإرجاع المخزون بنجاح' });
   } catch (err) {
-    console.error('Assign orders error:', err);
-    res.status(500).json({ error: 'خطأ في توزيع الطلبيات' });
+    await client.query('ROLLBACK');
+    res.status(500).json({ error: 'خطأ في حذف الطلبية' });
+  } finally {
+    client.release();
   }
 });
 
-// التوزيع التلقائي للطلبيات الجديدة
+// تحديث حالة الطلبيات بالجملة
+app.post('/api/orders/bulk-status', authenticateToken, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const { order_ids, status, note } = req.body;
+
+    if (!order_ids || !Array.isArray(order_ids) || order_ids.length === 0 || !status) {
+      return res.status(400).json({ error: 'الرجاء تحديد الطلبيات والحالة الجديدة' });
+    }
+
+    for (const id of order_ids) {
+      await client.query(
+        `UPDATE orders SET status = $1, updated_at = NOW() WHERE id = $2`,
+        [status, id]
+      );
+
+      await client.query(
+        `INSERT INTO order_history (order_id, user_id, action, new_status, note)
+         VALUES ($1, $2, 'bulk_status_change', $3, $4)`,
+        [id, req.user.id, status, note || 'تحديث حالة بالجملة']
+      );
+    }
+
+    await client.query('COMMIT');
+    res.json({ message: `تم تحديث حالة ${order_ids.length} طلبية بنجاح` });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    res.status(500).json({ error: 'خطأ في التحديث بالجملة' });
+  } finally {
+    client.release();
+  }
+});
+
+// توزيع الطلبيات تلقائياً
 app.post('/api/orders/auto-assign', authenticateToken, requireRole('admin', 'supervisor'), async (req, res) => {
   const client = await pool.connect();
   try {
@@ -936,11 +827,9 @@ app.post('/api/orders/auto-assign', authenticateToken, requireRole('admin', 'sup
 
     const agents = await client.query(
       `SELECT u.id, u.full_name, u.max_daily_orders,
-              (SELECT COUNT(*) FROM orders WHERE assigned_to = u.id 
-               AND DATE(created_at) = CURRENT_DATE) as today_count
+              (SELECT COUNT(*) FROM orders WHERE assigned_to = u.id AND DATE(created_at) = CURRENT_DATE) as today_count
        FROM users u WHERE u.role = 'agent' AND u.is_active = true
-       ORDER BY (SELECT COUNT(*) FROM orders WHERE assigned_to = u.id 
-                 AND DATE(created_at) = CURRENT_DATE) ASC`
+       ORDER BY (SELECT COUNT(*) FROM orders WHERE assigned_to = u.id AND DATE(created_at) = CURRENT_DATE) ASC`
     );
 
     if (agents.rows.length === 0) {
@@ -973,7 +862,6 @@ app.post('/api/orders/auto-assign', authenticateToken, requireRole('admin', 'sup
     res.json({ message: `تم توزيع ${assigned} طلبية تلقائياً` });
   } catch (err) {
     await client.query('ROLLBACK');
-    console.error('Auto-assign error:', err);
     res.status(500).json({ error: 'خطأ في التوزيع التلقائي' });
   } finally {
     client.release();
@@ -990,7 +878,6 @@ app.get('/api/dashboard/stats', authenticateToken, async (req, res) => {
       params = [req.user.id];
     }
 
-    // إحصائيات اليوم
     const todayStats = await pool.query(`
       SELECT 
         COUNT(*) FILTER (WHERE status = 'new') as new_orders,
@@ -1009,7 +896,6 @@ app.get('/api/dashboard/stats', authenticateToken, async (req, res) => {
       WHERE DATE(created_at) = CURRENT_DATE ${agentFilter}
     `, params);
 
-    // إحصائيات عامة
     const totalStats = await pool.query(`
       SELECT 
         COUNT(*) as total_orders,
@@ -1030,7 +916,6 @@ app.get('/api/dashboard/stats', authenticateToken, async (req, res) => {
       FROM orders ${agentFilter ? 'WHERE ' + agentFilter.replace('AND ', '') : ''}
     `, params);
 
-    // منتجات منخفضة المخزون
     const lowStock = await pool.query(
       `SELECT name, sku, stock_quantity, reserved_quantity,
               (stock_quantity - reserved_quantity) as available
@@ -1039,7 +924,6 @@ app.get('/api/dashboard/stats', authenticateToken, async (req, res) => {
        ORDER BY (stock_quantity - reserved_quantity) ASC LIMIT 10`
     );
 
-    // أداء العمال (اليوم)
     let agentPerformance = [];
     if (req.user.role !== 'agent') {
       const perf = await pool.query(`
@@ -1064,122 +948,13 @@ app.get('/api/dashboard/stats', authenticateToken, async (req, res) => {
       agentPerformance
     });
   } catch (err) {
-    console.error('Dashboard stats error:', err);
     res.status(500).json({ error: 'خطأ في جلب الإحصائيات' });
   }
 });
 
-// ======================== ORDER HISTORY ========================
-app.get('/api/orders/:id/history', authenticateToken, async (req, res) => {
-  try {
-    const result = await pool.query(
-      `SELECT oh.*, u.full_name as user_name
-       FROM order_history oh
-       LEFT JOIN users u ON oh.user_id = u.id
-       WHERE oh.order_id = $1
-       ORDER BY oh.created_at DESC`,
-      [req.params.id]
-    );
-    res.json(result.rows);
-  } catch (err) {
-    res.status(500).json({ error: 'خطأ في جلب السجل' });
-  }
-});
-// ======================== DELETE ORDER (حذف طلبية) ========================
-app.delete('/api/orders/:id', authenticateToken, requireRole('admin'), async (req, res) => {
-  const client = await pool.connect();
-  try {
-    await client.query('BEGIN');
-    const orderId = req.params.id;
-
-    // 1. جلب عناصر الطلبية لإلغاء الحجز من المخزون
-    const items = await client.query('SELECT * FROM order_items WHERE order_id = $1', [orderId]);
-    const order = await client.query('SELECT status FROM orders WHERE id = $1', [orderId]);
-
-    if (order.rows.length === 0) {
-      await client.query('ROLLBACK');
-      return res.status(404).json({ error: 'الطلبية غير موجودة' });
-    }
-
-    const currentStatus = order.rows[0].status;
-
-    // إذا كانت الطلبية جديدة أو معلقة، نلغي حجز الكمية
-    if (['new', 'callback', 'no_answer'].includes(currentStatus)) {
-      for (const item of items.rows) {
-        await client.query(
-          'UPDATE products SET reserved_quantity = GREATEST(reserved_quantity - $1, 0) WHERE id = $2',
-          [item.quantity, item.product_id]
-        );
-      }
-    }
-
-    // 2. حذف الطلبية وسجلها
-    await client.query('DELETE FROM order_history WHERE order_id = $1', [orderId]);
-    await client.query('DELETE FROM order_items WHERE order_id = $1', [orderId]);
-    await client.query('DELETE FROM orders WHERE id = $1', [orderId]);
-
-    await client.query('COMMIT');
-    res.json({ message: 'تم حذف الطلبية وإرجاع المخزون بنجاح' });
-  } catch (err) {
-    await client.query('ROLLBACK');
-    console.error('Delete order error:', err);
-    res.status(500).json({ error: 'خطأ في حذف الطلبية' });
-  } finally {
-    client.release();
-  }
-});
-
-// ======================== BULK STATUS UPDATE (تحديث بالجملة) ========================
-app.post('/api/orders/bulk-status', authenticateToken, async (req, res) => {
-  const client = await pool.connect();
-  try {
-    await client.query('BEGIN');
-    const { order_ids, status, note } = req.body;
-
-    if (!order_ids || !Array.isArray(order_ids) || order_ids.length === 0 || !status) {
-      return res.status(400).json({ error: 'الرجاء تحديد الطلبيات والحالة الجديدة' });
-    }
-
-    for (const id of order_ids) {
-      await client.query(
-        `UPDATE orders SET status = $1, updated_at = NOW() WHERE id = $2`,
-        [status, id]
-      );
-
-      await client.query(
-        `INSERT INTO order_history (order_id, user_id, action, new_status, note)
-         VALUES ($1, $2, 'bulk_status_change', $3, $4)`,
-        [id, req.user.id, status, note || 'تحديث حالة بالجملة']
-      );
-    }
-
-    await client.query('COMMIT');
-    res.json({ message: `تم تحديث حالة ${order_ids.length} طلبية بنجاح` });
-  } catch (err) {
-    await client.query('ROLLBACK');
-    console.error('Bulk status error:', err);
-    res.status(500).json({ error: 'خطأ في التحديث بالجملة' });
-  } finally {
-    client.release();
-  }
-});
-
-// ======================== DELETE PRODUCT (حذف منتج) ========================
-app.delete('/api/products/:id', authenticateToken, requireRole('admin'), async (req, res) => {
-  try {
-    const productId = req.params.id;
-    await pool.query('UPDATE products SET is_active = false, updated_at = NOW() WHERE id = $1', [productId]);
-    res.json({ message: 'تم تعطيل/حذف المنتج بنجاح' });
-  } catch (err) {
-    console.error('Delete product error:', err);
-    res.status(500).json({ error: 'خطأ في حذف المنتج' });
-  }
-});
 // ============================================================
-//  PUBLIC APIS FOR LANDING PAGE (بدون مصادقة للزبائن)
+//  PUBLIC APIS FOR LANDING PAGE (بدون مصادقة)
 // ============================================================
-
-// جلب الولايات والتكاليف لصفحة الهبوط
 app.get('/api/public/wilayas', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM wilayas ORDER BY code::int');
@@ -1189,7 +964,6 @@ app.get('/api/public/wilayas', async (req, res) => {
   }
 });
 
-// جلب المنتجات النشطة لصفحة الهبوط
 app.get('/api/public/products', async (req, res) => {
   try {
     const result = await pool.query(
@@ -1200,7 +974,7 @@ app.get('/api/public/products', async (req, res) => {
     res.status(500).json({ error: 'خطأ في جلب المنتجات' });
   }
 });
-// جلب منتج محدد حسب الـ ID لصفحة الهبوط
+
 app.get('/api/public/products/:id', async (req, res) => {
   try {
     const result = await pool.query(
@@ -1215,7 +989,7 @@ app.get('/api/public/products/:id', async (req, res) => {
     res.status(500).json({ error: 'خطأ في جلب المنتج' });
   }
 });
-// إرسال طلبية من صفحة الهبوط مباشرة للـ CRM
+
 app.post('/api/public/orders', async (req, res) => {
   const client = await pool.connect();
   try {
@@ -1231,7 +1005,6 @@ app.post('/api/public/orders', async (req, res) => {
       return res.status(400).json({ error: 'الرجاء إكمال جميع الحقول الإجبارية' });
     }
 
-    // كشف التكرار (نفس الهاتف في آخر 24 ساعة)
     const duplicateCheck = await client.query(
       `SELECT id, tracking_id FROM orders 
        WHERE customer_phone = $1 AND created_at > NOW() - INTERVAL '24 hours'
@@ -1241,18 +1014,16 @@ app.post('/api/public/orders', async (req, res) => {
 
     let isDuplicate = duplicateCheck.rows.length > 0;
 
-    // جلب تكاليف التوصيل
     const wilaya = await client.query('SELECT * FROM wilayas WHERE id = $1', [wilaya_id]);
     if (wilaya.rows.length === 0) {
       await client.query('ROLLBACK');
       return res.status(400).json({ error: 'الولاية غير موجودة' });
     }
 
-    const delivery_cost = delivery_type === 'home' 
-      ? parseFloat(wilaya.rows[0].delivery_cost_home) 
-      : parseFloat(wilaya.rows[0].delivery_cost_desk);
+    const delivery_cost = parseFloat(delivery_type === 'home' 
+      ? wilaya.rows[0].delivery_cost_home 
+      : wilaya.rows[0].delivery_cost_desk) || 0;
 
-    // جلب المنتج
     const product = await client.query('SELECT * FROM products WHERE id = $1 AND is_active = true', [product_id]);
     if (product.rows.length === 0) {
       await client.query('ROLLBACK');
@@ -1261,9 +1032,12 @@ app.post('/api/public/orders', async (req, res) => {
 
     const p = product.rows[0];
     const qty = parseInt(quantity) || 1;
-    const totalAmount = parseFloat(p.sale_price) * qty;
+    const productsTotal = parseFloat(p.sale_price) * qty;
 
-    // التوزيع التلقائي على العمال (Round Robin)
+    // الخصم التلقائي للتوصيل إذا تم اختيار أكثر من قطعة واحدة
+    const finalDeliveryCost = qty >= 2 ? 0 : delivery_cost;
+    const grandTotalCOD = productsTotal + finalDeliveryCost;
+
     const agents = await client.query(
       `SELECT id FROM (
          SELECT u.id, u.max_daily_orders,
@@ -1280,7 +1054,6 @@ app.post('/api/public/orders', async (req, res) => {
     const assignedTo = agents.rows.length > 0 ? agents.rows[0].id : null;
     const trackingId = 'DZ' + Date.now().toString().slice(-6) + Math.random().toString(36).substring(2, 5).toUpperCase();
 
-    // إدخال الطلبية
     const orderResult = await client.query(
       `INSERT INTO orders (tracking_id, customer_name, customer_phone, customer_phone2,
        wilaya_id, commune, address, delivery_type, status, total_amount, delivery_cost,
@@ -1289,16 +1062,15 @@ app.post('/api/public/orders', async (req, res) => {
       [trackingId, customer_name, customer_phone, customer_phone2,
        wilaya_id, commune, address, delivery_type || 'desk',
        isDuplicate ? 'duplicate' : 'new',
-       totalAmount, delivery_cost, totalAmount, assignedTo, notes]
+       grandTotalCOD, finalDeliveryCost, grandTotalCOD, assignedTo, notes]
     );
 
     const orderId = orderResult.rows[0].id;
 
-    // إدخال عنصر الطلبية وحجز المخزون
     await client.query(
       `INSERT INTO order_items (order_id, product_id, product_name, quantity, unit_price, total_price)
        VALUES ($1,$2,$3,$4,$5,$6)`,
-      [orderId, p.id, p.name, qty, p.sale_price, totalAmount]
+      [orderId, p.id, p.name, qty, p.sale_price, productsTotal]
     );
 
     await client.query(
@@ -1322,12 +1094,12 @@ app.post('/api/public/orders', async (req, res) => {
 
   } catch (err) {
     await client.query('ROLLBACK');
-    console.error('Landing page order error:', err);
     res.status(500).json({ error: 'حدث خطأ أثناء تسجيل الطلب، يرجى المحاولة لاحقاً' });
   } finally {
     client.release();
   }
 });
+
 // ======================== ROUTES ========================
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
@@ -1341,8 +1113,6 @@ app.get('/crm', (req, res) => {
 initDatabase().then(() => {
   app.listen(PORT, () => {
     console.log(`🚀 COD CRM Server running on port ${PORT}`);
-    console.log(`📊 Dashboard: http://localhost:${PORT}/crm`);
-    console.log(`🔐 Default login: admin / admin123`);
   });
 }).catch(err => {
   console.error('Failed to start server:', err);
