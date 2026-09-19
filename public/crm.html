@@ -1321,10 +1321,15 @@ function openPrintWindow(ordersList) {
   let cardsHtml = ordersList.map((o) => {
     const barcodeImg = getBarcodeDataUrl(o.tracking_id);
     const itemsList = (o.items || []).map(i => `<li style="font-size:12px; font-weight:bold; margin-bottom:2px;">• ${i.product_name} <strong>(×${i.quantity})</strong></li>`).join('');
-    const formattedMoney = formatMoney(o.total_amount);
+    
+    const deliveryCost = parseFloat(o.delivery_cost) || 0;
+    const totalCOD = parseFloat(o.total_amount) || 0;
+    const productsPrice = totalCOD > deliveryCost ? totalCOD - deliveryCost : totalCOD;
 
     return `
       <div class="page-break" style="width: 95mm; min-height: 140mm; border: 3px solid #000; padding: 10px; margin: 10px auto; background: #ffffff !important; color: #000000 !important; font-family: 'Tajawal', sans-serif; direction: rtl; box-sizing: border-box; page-break-after: always;">
+        
+        <!-- Header -->
         <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #000; padding-bottom:5px; margin-bottom:8px;">
           <div>
             <h2 style="font-size:16px; font-weight:900; margin:0;">متجر التجارة الإلكترونية</h2>
@@ -1336,10 +1341,12 @@ function openPrintWindow(ordersList) {
           </div>
         </div>
 
+        <!-- Barcode Area -->
         <div style="text-align:center; margin:8px 0;">
           <img src="${barcodeImg}" style="max-width:100%; height:auto;" />
         </div>
 
+        <!-- Customer Info -->
         <div style="border:2px solid #000; padding:6px; margin-bottom:8px; border-radius:4px; background:#fafafa;">
           <div style="font-size:10px; color:#555; font-weight:bold;">معلومات الزبون:</div>
           <div style="font-size:15px; font-weight:900;">${o.customer_name}</div>
@@ -1348,18 +1355,27 @@ function openPrintWindow(ordersList) {
           <div style="font-size:11px;">${o.address || ''}</div>
         </div>
 
-        <div style="border:1px solid #000; padding:6px; margin-bottom:8px; border-radius:4px; min-height:30mm;">
-          <div style="font-size:10px; color:#555; font-weight:bold; border-bottom:1px solid #ccc; padding-bottom:3px; margin-bottom:4px;">محتوى الطرد:</div>
-          <ul style="list-style:none; padding:0; margin:0;">
+        <!-- Content & Cost Breakdown -->
+        <div style="border:1px solid #000; padding:6px; margin-bottom:8px; border-radius:4px; min-height:28mm;">
+          <div style="font-size:10px; color:#555; font-weight:bold; border-bottom:1px solid #ccc; padding-bottom:3px; margin-bottom:4px;">محتوى الطرد والتفاصيل:</div>
+          <ul style="list-style:none; padding:0; margin:0; margin-bottom:6px;">
             ${itemsList}
           </ul>
+
+          <!-- تفصيل سعر الشحن وسعر السلعة -->
+          <div style="border-top: 1px dashed #000; padding-top: 4px; font-size: 11px; display: flex; justify-content: space-between;">
+            <span>ثمن المنتجات: <strong>${formatMoney(productsPrice)}</strong></span>
+            <span>سعر الشحن: <strong>${formatMoney(deliveryCost)}</strong></span>
+          </div>
         </div>
 
+        <!-- Total COD to Collect -->
         <div style="border:2px solid #000; padding:6px; text-align:center; border-radius:4px; background:#000; color:#fff;">
-          <span style="font-size:10px; display:block; font-weight:bold;">المبلغ المطلوب تحصيله (COD):</span>
-          <span style="font-size:22px; font-weight:900;">${formattedMoney}</span>
+          <span style="font-size:10px; display:block; font-weight:bold;">المبلغ الإجمالي المطلوب تحصيله (COD):</span>
+          <span style="font-size:24px; font-weight:900;">${formatMoney(totalCOD)}</span>
         </div>
 
+        <!-- Footer -->
         <div style="margin-top:8px; text-align:center; font-size:9px; font-weight:bold; color:#444;">
           شكراً لتسوقكم معنا! يرجى التأكد من الطرد قبل الدفع.
         </div>
@@ -1386,7 +1402,7 @@ function openPrintWindow(ordersList) {
     </html>
   `);
   printWin.document.close();
-}
+      }
 </script>
 </body>
   </html>
