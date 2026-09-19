@@ -1058,6 +1058,96 @@ app.get('/api/orders/:id/history', authenticateToken, async (req, res) => {
     res.status(500).json({ error: 'خطأ في جلب السجل' });
   }
 });
+// ======================== DELETE ORDER (حذف طلبية) ========================
+app.delete('/api/orders/:id', authenticateToken, requireRole('admin'), async (req, res) => {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const orderId = req.params.id;
+
+    // 1. جلب عناصر الطلبية لإلغاء الحجز من المخزون
+    const items = await client.query('SELECT * FROM order_items WHERE order_id = $1', [orderId]);
+    const order = await client.query('SELECT status FROM orders WHERE id = $1', [orderId]);
+
+    if (order.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'الطلبية غير موجودة' });
+    }
+
+    const currentStatus = order.rows[0].status;
+
+    // إذا كانت الطلبية جديدة أو معلقة، نلغي حجز الكمية
+    if (['new', 'callback', 'no_answer'].includes(currentStatus)) {
+      for (const item of items.rows) {
+        await client.query(
+          'UPDATE products SET reserved_quantity = GREATEST(reserved_quantity - $1, 0) WHERE id = $2',
+          [item.quantity, item.product_id]
+        );
+      }
+    }
+
+    // 2. حذف الطلبية وسجلها
+    await client.query('DELETE FROM order_history WHERE order_id = $1', [orderId]);
+    await client.query('DELETE FROM order_items WHERE order_id = $1', [orderId]);
+    await client.query('DELETE FROM orders WHERE id = $1', [orderId]);
+
+    await client.query('COMMIT');
+    res.json({ message: 'تم حذف الطلبية وإرجاع المخزون بنجاح' });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Delete order error:', err);
+    res.status(500).json({ error: 'خطأ في حذف الطلبية' });
+  } finally {
+    client.release();
+  }
+});
+
+// ======================== BULK STATUS UPDATE (تحديث بالجملة) ========================
+app.post('/api/orders/bulk-status', authenticateToken, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const { order_ids, status, note } = req.body;
+
+    if (!order_ids || !Array.isArray(order_ids) || order_ids.length === 0 || !status) {
+      return res.status(400).json({ error: 'الرجاء تحديد الطلبيات والحالة الجديدة' });
+    }
+
+    for (const id of order_ids) {
+      await client.query(
+        `UPDATE orders SET status = $1, updated_at = NOW() WHERE id = $2`,
+        [status, id]
+      );
+
+      await client.query(
+        `INSERT INTO order_history (order_id, user_id, action, new_status, note)
+         VALUES ($1, $2, 'bulk_status_change', $3, $4)`,
+        [id, req.user.id, status, note || 'تحديث حالة بالجملة']
+      );
+    }
+
+    await client.query('COMMIT');
+    res.json({ message: `تم تحديث حالة ${order_ids.length} طلبية بنجاح` });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Bulk status error:', err);
+    res.status(500).json({ error: 'خطأ في التحديث بالجملة' });
+  } finally {
+    client.release();
+  }
+});
+
+// ======================== DELETE PRODUCT (حذف منتج) ========================
+app.delete('/api/products/:id', authenticateToken, requireRole('admin'), async (req, res) => {
+  try {
+    const productId = req.params.id;
+    await pool.query('UPDATE products SET is_active = false, updated_at = NOW() WHERE id = $1', [productId]);
+    res.json({ message: 'تم تعطيل/حذف المنتج بنجاح' });
+  } catch (err) {
+    console.error('Delete product error:', err);
+    res.status(500).json({ error: 'خطأ في حذف المنتج' });
+  }
+});
 // ============================================================
 //  PUBLIC APIS FOR LANDING PAGE (بدون مصادقة للزبائن)
 // ============================================================
