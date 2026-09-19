@@ -3,11 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>COD CRM - لوحة التحكم</title>
+  <title>COD CRM - لوحة التحكم الاحترافية</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+  <!-- مكتبة تصدير Excel الرسمية -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <style>
     * { font-family: 'Tajawal', sans-serif; }
     body { background: #0f172a; color: #e2e8f0; }
@@ -55,7 +57,6 @@
       transition: all 0.2s;
     }
     .input-field:focus { border-color: #3b82f6; outline: none; box-shadow: 0 0 0 3px rgba(59,130,246,0.2); }
-    
     select.input-field option { background: #1e293b; color: #e2e8f0; }
 
     .badge { padding: 2px 10px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; }
@@ -63,7 +64,6 @@
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: #0f172a; }
     ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
-    ::-webkit-scrollbar-thumb:hover { background: #475569; }
 
     .pulse-dot { animation: pulse 2s infinite; }
     @keyframes pulse {
@@ -75,7 +75,6 @@
 </head>
 <body class="min-h-screen">
 
-<!-- Mobile Overlay -->
 <div id="sidebarOverlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/60 z-40 hidden md:hidden"></div>
 
 <!-- =================== SIDEBAR =================== -->
@@ -145,7 +144,7 @@
         <button onclick="loadDashboard()" class="bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded-lg text-sm transition-colors">
           <i class="fas fa-sync-alt ml-1"></i> <span class="hidden sm:inline">تحديث</span>
         </button>
-        <div class="w-3 h-3 bg-green-500 rounded-full pulse-dot" title="متصل"></div>
+        <div class="w-3 h-3 bg-green-500 rounded-full pulse-dot"></div>
       </div>
     </div>
   </div>
@@ -171,14 +170,35 @@
 
   <!-- ORDERS SECTION -->
   <div id="section-orders" class="p-4 md:p-6 space-y-4 hidden">
+    
+    <!-- TOOLBAR OVER ORDERS -->
     <div class="flex flex-wrap items-center gap-2 md:gap-3">
-      <button onclick="openNewOrderModal()" class="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-4 py-2 md:px-5 md:py-2.5 rounded-xl font-medium text-sm md:text-base transition-all">
-        <i class="fas fa-plus ml-1 md:ml-2"></i>طلبية جديدة
+      <button onclick="openNewOrderModal()" class="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-4 py-2 md:px-5 md:py-2.5 rounded-xl font-medium text-sm md:text-base">
+        <i class="fas fa-plus ml-1"></i>طلبية جديدة
       </button>
-      <button onclick="printSelectedBordereaux()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 md:px-4 md:py-2.5 rounded-xl font-medium text-xs md:text-sm transition-all">
-        <i class="fas fa-print ml-1"></i>طباعة (Bulk)
+
+      <!-- EXPORT EXCEL DROPDOWN -->
+      <div class="relative inline-block text-left">
+        <button onclick="toggleExcelMenu()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 md:px-4 md:py-2.5 rounded-xl font-medium text-xs md:text-sm flex items-center gap-2">
+          <i class="fas fa-file-excel"></i> تصدير إكسيل <i class="fas fa-chevron-down text-xs"></i>
+        </button>
+        <div id="excelMenu" class="hidden absolute right-0 mt-2 w-48 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl z-50 py-2">
+          <a href="#" onclick="exportExcel('yalidine')" class="block px-4 py-2 text-xs text-gray-200 hover:bg-slate-700">🚚 صيغة ياليدين (Yalidine)</a>
+          <a href="#" onclick="exportExcel('zr')" class="block px-4 py-2 text-xs text-gray-200 hover:bg-slate-700">📦 صيغة ZR Express</a>
+          <a href="#" onclick="exportExcel('general')" class="block px-4 py-2 text-xs text-gray-200 hover:bg-slate-700">📋 ملف شامل (الكل)</a>
+        </div>
+      </div>
+
+      <!-- BULK ACTIONS -->
+      <button onclick="printSelectedBordereaux()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 md:px-4 md:py-2.5 rounded-xl font-medium text-xs md:text-sm">
+        <i class="fas fa-print ml-1"></i>طباعة المحدد
       </button>
-      <button onclick="autoAssignOrders()" class="bg-amber-600 hover:bg-amber-700 text-white px-3 py-2 md:px-4 md:py-2.5 rounded-xl font-medium text-xs md:text-sm transition-all admin-only">
+
+      <button onclick="openBulkStatusModal()" class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 md:px-4 md:py-2.5 rounded-xl font-medium text-xs md:text-sm">
+        <i class="fas fa-tags ml-1"></i>تغيير حالة المحدد
+      </button>
+
+      <button onclick="autoAssignOrders()" class="bg-amber-600 hover:bg-amber-700 text-white px-3 py-2 md:px-4 md:py-2.5 rounded-xl font-medium text-xs md:text-sm admin-only">
         <i class="fas fa-wand-magic-sparkles ml-1"></i>توزيع تلقائي
       </button>
       
@@ -196,12 +216,13 @@
         <option value="returned">مرتجعة</option>
       </select>
       
-      <input type="text" id="searchOrders" placeholder="بحث بالاسم أو الهاتف..." onkeyup="debounceSearch()" class="input-field rounded-xl px-3 py-2 text-xs md:text-sm w-full sm:w-48 md:w-64">
+      <input type="text" id="searchOrders" placeholder="بحث..." onkeyup="debounceSearch()" class="input-field rounded-xl px-3 py-2 text-xs md:text-sm w-full sm:w-48 md:w-64">
     </div>
 
+    <!-- ORDERS TABLE -->
     <div class="stat-card rounded-2xl overflow-hidden">
       <div class="overflow-x-auto">
-        <table class="w-full text-sm min-w-[700px]">
+        <table class="w-full text-sm min-w-[800px]">
           <thead>
             <tr class="bg-slate-800/50 text-gray-400">
               <th class="px-4 py-3 text-right"><input type="checkbox" id="selectAll" onchange="toggleSelectAll()" class="rounded"></th>
@@ -269,6 +290,35 @@
 </div>
 
 <!-- =================== MODALS =================== -->
+
+<!-- BULK STATUS MODAL -->
+<div id="bulkStatusModal" class="fixed inset-0 z-50 hidden">
+  <div class="modal-overlay absolute inset-0" onclick="closeModal('bulkStatusModal')"></div>
+  <div class="relative z-10 flex items-center justify-center min-h-screen px-4">
+    <div class="modal-content rounded-2xl w-full max-w-md p-6">
+      <h3 class="text-xl font-bold mb-4"><i class="fas fa-tags text-purple-500 ml-2"></i>تغيير حالة الطلبيات المحددة</h3>
+      <p class="text-gray-400 text-sm mb-4" id="bulkCountInfo">سيتم تغيير حالة الطلبيات المختارة</p>
+      
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-300 mb-1">اختر الحالة الجديدة</label>
+          <select id="bulkStatusSelect" class="input-field w-full rounded-xl px-4 py-2.5">
+            <option value="confirmed">مؤكدة</option>
+            <option value="shipped">تم الشحن</option>
+            <option value="delivered">تم التوصيل</option>
+            <option value="cancelled">ملغاة</option>
+            <option value="returned">مرتجعة</option>
+            <option value="no_answer">لا يجيب</option>
+          </select>
+        </div>
+
+        <button onclick="submitBulkStatus()" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 rounded-xl">
+          حفظ وتطبيق على الجميع
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- New Order Modal -->
 <div id="newOrderModal" class="fixed inset-0 z-50 hidden">
@@ -388,13 +438,10 @@
             <label class="block text-sm font-medium text-gray-300 mb-1">تنبيه الحد الأدنى</label>
             <input type="number" name="min_stock_alert" value="10" class="input-field w-full rounded-xl px-4 py-2.5">
           </div>
-          
-          <!-- 🔴 خانة صورة المنتج -->
           <div class="col-span-2">
             <label class="block text-sm font-medium text-gray-300 mb-1">رابط صورة المنتج (Image URL)</label>
             <input type="url" name="image_url" placeholder="https://example.com/image.jpg" class="input-field w-full rounded-xl px-4 py-2.5">
           </div>
-
           <div class="col-span-2">
             <label class="block text-sm font-medium text-gray-300 mb-1">الوصف</label>
             <textarea name="description" rows="2" class="input-field w-full rounded-xl px-4 py-2.5"></textarea>
@@ -403,56 +450,6 @@
 
         <button type="submit" class="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white py-3 rounded-xl font-bold text-lg hover:from-green-600 hover:to-emerald-700 transition-all">
           <i class="fas fa-save ml-2"></i>حفظ المنتج
-        </button>
-      </form>
-    </div>
-  </div>
-</div>
-
-<!-- New User Modal -->
-<div id="newUserModal" class="fixed inset-0 z-50 hidden">
-  <div class="modal-overlay absolute inset-0" onclick="closeModal('newUserModal')"></div>
-  <div class="relative z-10 flex items-start justify-center pt-10 px-4 min-h-screen">
-    <div class="modal-content rounded-2xl w-full max-w-lg p-6">
-      <div class="flex items-center justify-between mb-6">
-        <h3 class="text-xl font-bold"><i class="fas fa-user-plus text-purple-500 ml-2"></i>مستخدم جديد</h3>
-        <button onclick="closeModal('newUserModal')" class="text-gray-400 hover:text-white"><i class="fas fa-times text-xl"></i></button>
-      </div>
-
-      <form id="newUserForm" onsubmit="createUser(event)" class="space-y-4">
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label class="block text-sm font-medium text-gray-300 mb-1">الاسم الكامل *</label>
-            <input type="text" name="full_name" required class="input-field w-full rounded-xl px-4 py-2.5">
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-300 mb-1">اسم المستخدم *</label>
-            <input type="text" name="username" required class="input-field w-full rounded-xl px-4 py-2.5">
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-300 mb-1">كلمة المرور *</label>
-            <input type="password" name="password" required class="input-field w-full rounded-xl px-4 py-2.5">
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-300 mb-1">الدور *</label>
-            <select name="role" required class="input-field w-full rounded-xl px-4 py-2.5">
-              <option value="agent">عامل تأكيد (Agent)</option>
-              <option value="supervisor">مشرف (Supervisor)</option>
-              <option value="admin">مدير (Admin)</option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-300 mb-1">رقم الهاتف</label>
-            <input type="tel" name="phone" class="input-field w-full rounded-xl px-4 py-2.5">
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-300 mb-1">الحد اليومي</label>
-            <input type="number" name="max_daily_orders" value="50" class="input-field w-full rounded-xl px-4 py-2.5">
-          </div>
-        </div>
-
-        <button type="submit" class="w-full bg-gradient-to-r from-purple-500 to-pink-600 text-white py-3 rounded-xl font-bold text-lg hover:from-purple-600 hover:to-pink-700 transition-all">
-          <i class="fas fa-save ml-2"></i>إنشاء الحساب
         </button>
       </form>
     </div>
@@ -535,6 +532,10 @@ function toggleSidebar() {
   const overlay = document.getElementById('sidebarOverlay');
   sidebar.classList.toggle('translate-x-full');
   overlay.classList.toggle('hidden');
+}
+
+function toggleExcelMenu() {
+  document.getElementById('excelMenu').classList.toggle('hidden');
 }
 
 async function apiCall(url, method = 'GET', body = null) {
@@ -693,7 +694,7 @@ async function loadOrders(page = 1) {
     const status = document.getElementById('filterStatus').value;
     const search = document.getElementById('searchOrders').value;
     
-    let url = `/api/orders?page=${page}&limit=30`;
+    let url = `/api/orders?page=${page}&limit=50`;
     if (status) url += `&status=${status}`;
     if (search) url += `&search=${encodeURIComponent(search)}`;
 
@@ -734,7 +735,14 @@ function renderOrders(data) {
       <td class="px-4 py-3 text-center">
         <div class="flex items-center justify-center gap-1">
           <button onclick="openStatusModal(${o.id}, '${o.tracking_id}')" class="bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 p-2 rounded-lg transition-colors" title="تغيير الحالة"><i class="fas fa-edit text-xs"></i></button>
-          <button onclick="printSingleBordereau(${o.id})" class="bg-amber-600/20 hover:bg-amber-600/40 text-amber-400 p-2 rounded-lg transition-colors mr-1" title="طباعة الوصل"><i class="fas fa-print text-xs"></i></button>
+          <button onclick="printSingleBordereau(${o.id})" class="bg-amber-600/20 hover:bg-amber-600/40 text-amber-400 p-2 rounded-lg transition-colors" title="طباعة الوصل"><i class="fas fa-print text-xs"></i></button>
+          
+          <!-- 🔴 زر حذف الطلبية (للأدمن) -->
+          ${currentUser.role === 'admin' ? `
+            <button onclick="deleteSingleOrder(${o.id}, '${o.tracking_id}')" class="bg-red-600/20 hover:bg-red-600/40 text-red-400 p-2 rounded-lg transition-colors" title="حذف الطلبية">
+              <i class="fas fa-trash text-xs"></i>
+            </button>
+          ` : ''}
         </div>
       </td>
     </tr>
@@ -757,6 +765,123 @@ function renderOrders(data) {
 function debounceSearch() {
   clearTimeout(searchTimeout);
   searchTimeout = setTimeout(() => loadOrders(), 400);
+}
+
+// 🔴 حذف طلبية واحدة
+async function deleteSingleOrder(id, trackingId) {
+  if (!confirm(`هل أنت متأكد من حذف الطلبية (${trackingId}) نهائياً وإرجاع كميات المخزون؟`)) return;
+
+  try {
+    await apiCall(`/api/orders/${id}`, 'DELETE');
+    showToast('تم حذف الطلبية وإرجاع المخزون بنجاح', 'success');
+    loadOrders();
+    loadDashboard();
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
+// 🔴 فتح نافذة التغيير بالجملة
+function openBulkStatusModal() {
+  const checked = document.querySelectorAll('.order-check:checked');
+  if (checked.length === 0) {
+    return showToast('يرجى تحديد طلبية واحدة على الأقل', 'warning');
+  }
+
+  document.getElementById('bulkCountInfo').textContent = `سيتم تطبيق الحالة على ${checked.length} طلبية مختارة`;
+  document.getElementById('bulkStatusModal').classList.remove('hidden');
+}
+
+// 🔴 تطبيق التحديث بالجملة
+async function submitBulkStatus() {
+  const selectedIds = Array.from(document.querySelectorAll('.order-check:checked')).map(cb => parseInt(cb.value));
+  const status = document.getElementById('bulkStatusSelect').value;
+
+  try {
+    const res = await apiCall('/api/orders/bulk-status', 'POST', { order_ids: selectedIds, status });
+    closeModal('bulkStatusModal');
+    showToast(res.message, 'success');
+    loadOrders();
+    loadDashboard();
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
+// 🔴 تصدير ملفات Excel الحقيقية (Yalidine / ZR / General)
+async function exportExcel(format) {
+  toggleExcelMenu();
+  const selectedIds = Array.from(document.querySelectorAll('.order-check:checked')).map(cb => parseInt(cb.value));
+  
+  try {
+    showToast('جاري تجهيز ملف إكسيل...', 'warning');
+    const data = await apiCall(`/api/orders?limit=200`);
+    let ordersToExport = data.orders;
+
+    if (selectedIds.length > 0) {
+      ordersToExport = ordersToExport.filter(o => selectedIds.includes(o.id));
+    }
+
+    if (ordersToExport.length === 0) {
+      return showToast('لا توجد طلبيات للتصدير', 'error');
+    }
+
+    let excelData = [];
+    let fileName = `orders_${format}_${new Date().toISOString().slice(0,10)}.xlsx`;
+
+    if (format === 'yalidine') {
+      excelData = ordersToExport.map(o => ({
+        'Tracking': o.tracking_id,
+        'Nom Client': o.customer_name,
+        'Telephone': o.customer_phone,
+        'Telephone 2': o.customer_phone2 || '',
+        'Wilaya': o.wilaya_name || '',
+        'Commune': o.commune || '',
+        'Adresse': o.address || '',
+        'Produits': (o.items || []).map(i => `${i.product_name} x${i.quantity}`).join(' + '),
+        'Prix': o.total_amount,
+        'Remarque': o.notes || '',
+        'Livraison': o.delivery_type === 'home' ? 1 : 0
+      }));
+    } else if (format === 'zr') {
+      excelData = ordersToExport.map(o => ({
+        'Tracking Code': o.tracking_id,
+        'Nom & Prenom': o.customer_name,
+        'Telephone 1': o.customer_phone,
+        'Telephone 2': o.customer_phone2 || '',
+        'Wilaya Destination': o.wilaya_name || '',
+        'Commune Destination': o.commune || '',
+        'Adresse': o.address || '',
+        'Designation Produit': (o.items || []).map(i => `${i.product_name} x${i.quantity}`).join(' + '),
+        'Montant COD': o.total_amount,
+        'Mode Livraison': o.delivery_type === 'home' ? 'A Domicile' : 'Stop Desk'
+      }));
+    } else {
+      excelData = ordersToExport.map(o => ({
+        'ID': o.id,
+        'رقم التتبع': o.tracking_id,
+        'اسم العميل': o.customer_name,
+        'رقم الهاتف': o.customer_phone,
+        'الولاية': o.wilaya_name,
+        'البلدية': o.commune,
+        'العنوان': o.address,
+        'المنتجات': (o.items || []).map(i => `${i.product_name} (x${i.quantity})`).join(' , '),
+        'المبلغ': o.total_amount,
+        'الحالة': getStatusLabel(o.status),
+        'المعين إليه': o.assigned_to_name || 'غير محدد',
+        'التاريخ': new Date(o.created_at).toLocaleDateString('ar-DZ')
+      }));
+    }
+
+    const worksheet = XLSX.utils.json_to_sheet(excelData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Orders");
+    XLSX.writeFile(workbook, fileName);
+
+    showToast('تم تحميل ملف الإكسيل بنجاح 🚀', 'success');
+  } catch (err) {
+    showToast('خطأ في تصدير ملف الإكسيل', 'error');
+  }
 }
 
 async function createOrder(e) {
@@ -929,7 +1054,15 @@ function renderProducts() {
             <h4 class="font-bold text-lg text-white">${p.name}</h4>
             <p class="text-sm text-gray-400 font-mono">${p.sku}</p>
           </div>
-          ${p.low_stock ? '<span class="badge bg-red-500 text-white">مخزون منخفض</span>' : ''}
+          <div class="flex items-center gap-2">
+            ${p.low_stock ? '<span class="badge bg-red-500 text-white">مخزون منخفض</span>' : ''}
+            <!-- 🔴 زر حذف المنتج -->
+            ${currentUser.role === 'admin' ? `
+              <button onclick="deleteProduct(${p.id}, '${p.name}')" class="text-red-400 hover:text-red-300 p-1" title="حذف المنتج">
+                <i class="fas fa-trash"></i>
+              </button>
+            ` : ''}
+          </div>
         </div>
         
         <div class="grid grid-cols-2 gap-3 mt-4 mb-4">
@@ -949,6 +1082,19 @@ function renderProducts() {
       </div>
     `;
   }).join('');
+}
+
+// 🔴 حذف منتج
+async function deleteProduct(id, name) {
+  if (!confirm(`هل أنت متأكد من تعطيل/حذف المنتج "${name}"؟`)) return;
+
+  try {
+    await apiCall(`/api/products/${id}`, 'DELETE');
+    showToast('تم تعطيل المنتج بنجاح', 'success');
+    loadProducts();
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
 }
 
 function copyLandingLink(url) {
@@ -1089,7 +1235,9 @@ function openNewOrderModal() {
 
 function openNewProductModal() { document.getElementById('newProductModal').classList.remove('hidden'); }
 function openNewUserModal() { document.getElementById('newUserModal').classList.remove('hidden'); }
-function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+function closeModal(id) { 
+  document.getElementById(id).classList.add('hidden'); 
+}
 
 function formatMoney(amount) {
   return new Intl.NumberFormat('ar-DZ', { style: 'decimal', minimumFractionDigits: 0 }).format(amount || 0) + ' دج';
@@ -1241,4 +1389,4 @@ function openPrintWindow(ordersList) {
 }
 </script>
 </body>
-          </html>
+  </html>
