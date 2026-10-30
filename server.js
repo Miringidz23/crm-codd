@@ -612,15 +612,16 @@ app.post('/api/orders', authenticateToken, async (req, res) => {
     const trackingId = 'DZ' + Date.now().toString().slice(-6) + Math.random().toString(36).substring(2, 5).toUpperCase();
 
     const orderResult = await client.query(
-      `INSERT INTO orders (tracking_id, customer_name, customer_phone, customer_phone2,
-       wilaya_id, commune, address, delivery_type, status, total_amount, delivery_cost,
-       net_amount, assigned_to, notes, source)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING *`,
-      [trackingId, customer_name, customer_phone, customer_phone2,
-       wilaya_id, commune, address, delivery_type || 'desk',
-       isDuplicate ? 'duplicate' : 'new',
-       grandTotalCOD, delivery_cost, grandTotalCOD, assignedTo, notes, source || 'manual']
-    );
+    'INSERT INTO orders (tracking_id, customer_name, customer_phone, customer_phone2, wilaya_id, commune, address, delivery_type, status, total_amount, delivery_cost, net_amount, assigned_to, notes, source, utm_source, utm_campaign, utm_content) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18) RETURNING *',
+    [
+        trackingId, customer_name, customer_phone, customer_phone2,
+        wilaya_id, commune, address, delivery_type || 'desk',
+        isDuplicate ? 'duplicate' : 'new',
+        grandTotalCOD, delivery_cost, grandTotalCOD, assignedTo, notes, source || 'manual',
+        utm_source || 'Direct', utm_campaign || 'None', utm_content || 'None'
+    ]
+);
+
 
     const orderId = orderResult.rows[0].id;
 
