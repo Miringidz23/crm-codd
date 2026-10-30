@@ -524,11 +524,13 @@ app.post('/api/orders', authenticateToken, async (req, res) => {
   try {
     await client.query('BEGIN');
 
-    const {
-      customer_name, customer_phone, customer_phone2,
-      wilaya_id, commune, address, delivery_type,
-      items, notes, source
+        const {
+        customer_name, customer_phone, customer_phone2,
+        wilaya_id, commune, address, delivery_type,
+        items, notes, source,
+        utm_source, utm_campaign, utm_content
     } = req.body;
+
 
     if (!customer_name || !customer_phone || !wilaya_id || !items || items.length === 0) {
       return res.status(400).json({ error: 'البيانات ناقصة: الاسم، الهاتف، الولاية، والمنتجات مطلوبة' });
