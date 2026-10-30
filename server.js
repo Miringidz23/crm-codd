@@ -528,6 +528,7 @@ app.post('/api/orders', authenticateToken, async (req, res) => {
       customer_name, customer_phone, customer_phone2,
       wilaya_id, commune, address, delivery_type,
       items, notes, source
+      
     } = req.body;
 
     if (!customer_name || !customer_phone || !wilaya_id || !items || items.length === 0) {
