@@ -120,7 +120,10 @@ async function initDatabase() {
         bordereau_printed BOOLEAN DEFAULT false,
         
         source VARCHAR(50) DEFAULT 'manual',
-        
+        utm_source VARCHAR(100) DEFAULT 'Direct',
+utm_campaign VARCHAR(100) DEFAULT 'None',
+utm_content VARCHAR(100) DEFAULT 'None',
+
         created_at TIMESTAMP DEFAULT NOW(),
         updated_at TIMESTAMP DEFAULT NOW(),
         confirmed_at TIMESTAMP,
