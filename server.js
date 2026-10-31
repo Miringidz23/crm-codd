@@ -3,6 +3,50 @@
 //  COD CRM ENTERPRISE SYSTEM - الجزائر
 //  السيرفر الرئيسي المتكامل (Backend)
 // ============================================================
+const axios = require('axios');
+async function sendMetaPurchaseEvent(orderData) {
+    const PIXEL_ID = '1012802758516614'; // معرّف crm pixel الخاص بك[span_0](start_span)[span_0](end_span)
+    const ACCESS_TOKEN = 'EAAaHZCWIsaooBSyh8wNoyAUrrHZB2aQ4SZBwBiGetGFdOfOZCD8khLv0r4aSndAEieZCdZA7UIgXL9vpYEcKldYZB9CcCH0fEhucG3LePUMTqcKQcUfrHxn83YNTNZAMtHgqb6DPDSOUl2WzPr1RY1zvey98qPqU1GyaxVimMH95lsCYqaoJImRZAc1fHDb8e7jIAfoENCPYSRMbzYwIMYCpaHDkndIVpylUvVZBQO2FlEMg8E60UXtwjnDbZBC3rbnXpflMCZBVGTsZBJuKprd48DV5Lms3LWgZDZD';
+    
+    const url = `https://graph.facebook.com/v21.0/${PIXEL_ID}/events?access_token=${ACCESS_TOKEN}`;
+
+    const eventData = {
+        data: [
+            {
+                event_name: 'Purchase',
+                event_time: Math.floor(Date.now() / 1000),
+                action_source: 'website',
+                event_source_url: orderData.sourceUrl || 'https://yourdomain.com',
+                user_data: {
+                    em: [orderData.email ? orderData.email.toLowerCase().trim() : ''],
+                    ph: [orderData.phone ? orderData.phone.trim() : ''],
+                    fn: [orderData.firstName ? orderData.firstName.toLowerCase().trim() : ''],
+                    fbc: orderData.fbc || null,
+                    fbp: orderData.fbp || null
+                },
+                custom_data: {
+                    currency: orderData.currency || 'DZD',
+                    value: orderData.value || 0,
+                    order_id: orderData.orderId || '12345'
+                },
+                custom_properties: {
+                    utm_source: orderData.utm_source || '',
+                    utm_medium: orderData.utm_medium || '',
+                    utm_campaign: orderData.utm_campaign || ''
+                }
+            }
+        ]
+    };
+
+    try {
+        const response = await axios.post(url, eventData);
+        console.log('CAPI Purchase Event Sent Successfully:', response.data);
+        return true;
+    } catch (error) {
+        console.error('Error sending CAPI event:', error.response ? error.response.data : error.message);
+        return false;
+    }
+}
 
 require('dotenv').config();
 const express = require('express');
