@@ -668,6 +668,17 @@ app.post('/api/orders', authenticateToken, async (req, res) => {
 
 
     const orderId = orderResult.rows[0].id;
+    await sendMetaPurchaseEvent({
+        firstName: customer_name,
+        phone: customer_phone,
+        email: '',
+        value: grandTotalCOD,
+        currency: 'DZD',
+        orderId: orderId,
+        utm_source: utm_source,
+        utm_campaign: utm_campaign,
+        sourceUrl: req.headers.referer || 'https://yourdomain.com'
+    });
 
     for (const item of orderItems) {
       await client.query(
