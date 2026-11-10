@@ -473,7 +473,36 @@ app.post('/api/products', authenticateToken, requireRole('admin', 'supervisor'),
     res.status(500).json({ error: 'خطأ في إنشاء المنتج' });
   }
 });
+app.put('/api/products/:id', authenticateToken, requireRole('admin', 'supervisor'), async (req, res) => {
+  try {
+    const { name, sku, description, purchase_price, sale_price, weight, stock_quantity, min_stock_alert, image_url } = req.body;
+    
+    const result = await pool.query(
+      `UPDATE products SET 
+        name = $1,
+        sku = $2,
+        description = $3,
+        purchase_price = $4,
+        sale_price = $5,
+        weight = $6,
+        stock_quantity = $7,
+        min_stock_alert = $8,
+        image_url = $9,
+        updated_at = NOW()
+       WHERE id = $10 RETURNING *`,
+      [name, sku, description, purchase_price || 0, sale_price, weight || 0.5, stock_quantity || 0, min_stock_alert || 10, image_url, req.params.id]
+    );
 
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'المنتج غير موجود' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'خطأ في تعديل المنتج' });
+  }
+});
 app.delete('/api/products/:id', authenticateToken, requireRole('admin'), async (req, res) => {
   try {
     await pool.query('UPDATE products SET is_active = false, updated_at = NOW() WHERE id = $1', [req.params.id]);
