@@ -1056,6 +1056,9 @@ function renderProducts() {
           </div>
           <div class="flex items-center gap-2">
             ${p.low_stock ? '<span class="badge bg-red-500 text-white">مخزون منخفض</span>' : ''}
+            <button onclick="editProduct(${p.id})" class="text-blue-400 hover:text-blue-300 p-1" title="تعديل المنتج">
+  <i class="fas fa-edit"></i>
+</button>
             <!-- 🔴 زر حذف المنتج -->
             ${currentUser.role === 'admin' ? `
               <button onclick="deleteProduct(${p.id}, '${p.name}')" class="text-red-400 hover:text-red-300 p-1" title="حذف المنتج">
