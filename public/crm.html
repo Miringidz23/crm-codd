@@ -1099,12 +1099,18 @@ async function deleteProduct(id, name) {
     showToast(err.message, 'error');
   }
 }
-// 👇 ضع الكود هنا 👇
-
 // 1. دالة فتح نافذة التعديل
 function editProduct(id) {
-  const p = products.find(prod => prod.id === id);
-  if (!p) return;
+  // 🚨 هذا التنبيه باش نتأكدو بلي الزر يخدم (كي يخدم مليح نحيوه من بعد)
+  alert("تم الضغط على زر التعديل! رقم المنتج: " + id);
+
+  // البحث عن المنتج بطريقة آمنة (نقارنو النص بالنص باش ما نغلطوش)
+  const p = products.find(prod => String(prod.id) === String(id));
+  
+  if (!p) {
+    alert("لم يتم العثور على بيانات المنتج في القائمة. جرب تحديث الصفحة.");
+    return;
+  }
 
   const modalHtml = `
     <div id="dynamicEditModal" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
@@ -1129,7 +1135,7 @@ function editProduct(id) {
           </div>
         </div>
         <div class="flex gap-2 mt-5">
-          <button onclick="saveEditProduct(${p.id}, '${p.sku}')" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-bold">حفظ التعديل</button>
+          <button onclick="saveEditProduct(${p.id})" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-bold">حفظ التعديل</button>
           <button onclick="document.getElementById('dynamicEditModal').remove()" class="flex-1 bg-gray-600 hover:bg-gray-700 text-white py-2 rounded-lg font-bold">إلغاء</button>
         </div>
       </div>
@@ -1139,16 +1145,19 @@ function editProduct(id) {
 }
 
 // 2. دالة حفظ التعديل وإرسالها للسيرفر
-async function saveEditProduct(id, oldSku) {
+async function saveEditProduct(id) {
   const name = document.getElementById('editName').value;
   const price = parseFloat(document.getElementById('editPrice').value);
   const purchase = parseFloat(document.getElementById('editPurchase').value) || 0;
   const stock = parseInt(document.getElementById('editStock').value) || 0;
 
+  // نجيبو المنتج باش ناخذو الـ SKU تاعو بأمان
+  const p = products.find(prod => String(prod.id) === String(id));
+
   try {
     await apiCall(`/api/products/${id}`, 'PUT', {
       name: name,
-      sku: oldSku,
+      sku: p ? p.sku : 'SKU', // تمرير الـ SKU من هنا بدون مشاكل
       sale_price: price,
       purchase_price: purchase,
       stock_quantity: stock
@@ -1160,9 +1169,7 @@ async function saveEditProduct(id, oldSku) {
   } catch (err) {
     showToast(err.message, 'error');
   }
-}
-
-// 👆 نهاية الكود 👆
+    }
 function copyLandingLink(url) {
   navigator.clipboard.writeText(url).then(() => {
     showToast('تم نسخ رابط صفحة الهبوط للمنتج! 🚀', 'success');
